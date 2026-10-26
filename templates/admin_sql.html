@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% block title %}SQL Console - CampusCommute{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Header -->
+    <div class="col-12 d-flex flex-wrap justify-content-between align-items-center border-bottom pb-3">
+        <div>
+            <h3 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-terminal-fill text-dark me-2"></i> Interactive SQL Query Console
+            </h3>
+            <p class="text-muted mb-0 small">
+                Live SQL Execution Environment for DBMS Project Evaluation & Grading.
+            </p>
+        </div>
+        <div>
+            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to Tables
+            </a>
+        </div>
+    </div>
+
+    <!-- Query Input Card -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-4">
+                <form action="{{ url_for('admin.admin_sql') }}" method="POST">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label fw-bold mb-0" for="sql_query">Type or Paste SQL Query (SELECT / EXPLAIN / SHOW):</label>
+                            <!-- Quick sample query buttons -->
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-secondary" onclick="setQuery('SELECT * FROM students;')">Students</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="setQuery('SELECT * FROM confirmed_bookings_view;')">View: Confirmed Bookings</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="setQuery('SELECT * FROM published_rides_view;')">View: Published Rides</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="setQuery('SELECT ar.ride_id, s.first_name, v.name, ar.remaining_capacity FROM available_rides ar JOIN drivers d ON d.student_id = ar.driver_id JOIN students s ON s.student_id = d.student_id JOIN vehicle v ON v.vehicle_number = ar.vehicle_number;')">3-Table Join</button>
+                            </div>
+                        </div>
+                        <textarea class="form-control font-monospace" id="sql_query" name="sql_query" rows="4" placeholder="SELECT * FROM available_rides WHERE remaining_capacity > 0;" required>{{ sql_query or '' }}</textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted small"><i class="bi bi-shield-check me-1"></i> Parameterized & safe execution engine</span>
+                        <button type="submit" class="btn btn-dark px-4 fw-semibold">
+                            <i class="bi bi-play-fill me-1"></i> Run SQL Query
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error or Results -->
+    {% if error %}
+    <div class="col-12">
+        <div class="alert alert-danger shadow-sm">
+            <h6 class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i> SQL Execution Error</h6>
+            <div class="font-monospace small">{{ error }}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if results %}
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-success">
+                    <i class="bi bi-check-circle-fill me-2"></i> Query Results ({{ results|length }} rows returned)
+                </h6>
+                <span class="badge bg-light text-secondary border font-monospace">{{ results|length }} records</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 480px;">
+                    <table class="table table-sm table-hover table-bordered mb-0 small">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                {% for col in columns %}
+                                    <th>{{ col }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in results %}
+                            <tr>
+                                {% for col in columns %}
+                                    <td>{{ row[col] }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% elif sql_query and not error %}
+    <div class="col-12">
+        <div class="alert alert-info shadow-sm">
+            <i class="bi bi-info-circle me-1"></i> Query executed successfully, but returned 0 rows.
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function setQuery(q) {
+    document.getElementById('sql_query').value = q;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,310 @@
+{% extends 'base.html' %}
+{% block title %}Student Passenger View - CampusCommute{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Header with Dynamic Sync Badge -->
+    <div class="col-12 d-flex flex-wrap justify-content-between align-items-center border-bottom pb-3">
+        <div>
+            <h3 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-person-walking text-primary me-2"></i> Student Passenger Dashboard
+            </h3>
+            <p class="text-muted mb-0 small">
+                Logged in as <strong>{{ session.get('first_name') }} {{ session.get('last_name') }}</strong> (Student ID: {{ session.get('user_id') }})
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-success-subtle text-success border border-success px-3 py-2" id="syncStatusBadge">
+                <i class="bi bi-arrow-repeat spin-icon me-1"></i> Multi-Account Real-Time Sync Active
+            </span>
+            <a href="{{ url_for('student.student_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </a>
+        </div>
+    </div>
+
+    <!-- Search / Filter Rides Card -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-4 bg-white rounded-3">
+                <h5 class="fw-bold mb-3"><i class="bi bi-funnel-fill text-primary me-2"></i> Find Campus Rides</h5>
+                <form action="{{ url_for('student.student_dashboard') }}" method="GET" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold" for="pickup_id">Pickup Node / Stop</label>
+                        <select class="form-select" id="pickup_id" name="pickup_id">
+                            <option value="">-- All Pickup Locations --</option>
+                            {% for loc in locations %}
+                                <option value="{{ loc.location_id }}" {% if selected_pickup == loc.location_id %}selected{% endif %}>
+                                    {{ loc.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold" for="drop_id">Drop-off Node / Destination</label>
+                        <select class="form-select" id="drop_id" name="drop_id">
+                            <option value="">-- All Destinations --</option>
+                            {% for loc in locations %}
+                                <option value="{{ loc.location_id }}" {% if selected_drop == loc.location_id %}selected{% endif %}>
+                                    {{ loc.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold" for="search_date">Departure Date</label>
+                        <input type="date" class="form-control" id="search_date" name="search_date" value="{{ search_date or '' }}">
+                    </div>
+
+                    <div class="col-md-2 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100 fw-semibold">
+                            <i class="bi bi-search me-1"></i> Search
+                        </button>
+                        {% if selected_pickup or selected_drop or search_date %}
+                            <a href="{{ url_for('student.student_dashboard') }}" class="btn btn-outline-secondary" title="Reset Filters">
+                                <i class="bi bi-x-lg"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Available Rides Section -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-car-front text-primary me-2"></i> Available Rides for Booking
+                </h5>
+                <span class="badge bg-primary rounded-pill">{{ rides|length }} Available</span>
+            </div>
+
+            <div class="card-body p-3">
+                {% if rides %}
+                    <div class="row g-3" id="ridesContainer">
+                        {% for ride in rides %}
+                        <div class="col-12" id="ride-card-{{ ride.ride_id }}">
+                            <div class="border rounded-3 p-3 bg-white hover-shadow transition">
+                                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                                    <div>
+                                        <span class="badge bg-dark me-2">Ride #{{ ride.ride_id }}</span>
+                                        <span class="fw-bold fs-5 text-primary">₹{{ "%.2f"|format(ride.fare_per_passenger) }}</span>
+                                        <span class="text-muted small">/ passenger</span>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-success fs-7" id="seats-badge-{{ ride.ride_id }}">
+                                            <i class="bi bi-people-fill me-1"></i>
+                                            <span class="remaining-count" data-ride-id="{{ ride.ride_id }}">{{ ride.remaining_capacity }}</span> / {{ ride.total_capacity }} Seats Available
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Driver & Vehicle -->
+                                <div class="row g-2 mb-3 text-secondary small">
+                                    <div class="col-md-6">
+                                        <i class="bi bi-person-circle me-1 text-dark"></i> Driver: <strong>{{ ride.driver_first_name }} {{ ride.driver_last_name }}</strong>
+                                        <span class="ms-1 text-muted">({{ ride.driver_phone }})</span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <i class="bi bi-car-front-fill me-1 text-dark"></i> Vehicle: <strong>{{ ride.vehicle_name }}</strong>
+                                        <span class="badge bg-light text-dark border ms-1">{{ ride.vehicle_number }}</span>
+                                    </div>
+                                    <div class="col-12">
+                                        <i class="bi bi-clock-fill me-1 text-dark"></i> Departure: <strong>{{ ride.departure_time }}</strong>
+                                    </div>
+                                </div>
+
+                                <!-- Ordered Route Stops Path -->
+                                <div class="mb-3 p-2 bg-light rounded-2 small">
+                                    <div class="fw-semibold text-secondary mb-1">
+                                        <i class="bi bi-geo-alt-fill text-danger me-1"></i> Ordered Route Path:
+                                    </div>
+                                    <div class="d-flex flex-wrap align-items-center gap-1">
+                                        {% for stop in ride.stops %}
+                                            <span class="badge bg-white text-dark border shadow-xs">
+                                                {{ stop.sequence_no }}. {{ stop.name }}
+                                            </span>
+                                            {% if not loop.last %}
+                                                <i class="bi bi-arrow-right text-muted small"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <!-- Booking Action Form -->
+                                <form action="{{ url_for('student.create_booking') }}" method="POST" class="d-flex flex-wrap align-items-center justify-content-between gap-2 border-top pt-2">
+                                    <input type="hidden" name="ride_id" value="{{ ride.ride_id }}">
+                                    
+                                    <div class="d-flex align-items-center gap-2 flex-grow-1">
+                                        <!-- Choose exact boarding stop from this ride's stops -->
+                                        <select name="pickup_location_id" class="form-select form-select-sm" required style="max-width: 180px;">
+                                            <option value="">Pickup Stop...</option>
+                                            {% for stop in ride.stops[:-1] %}
+                                                <option value="{{ stop.location_id }}" {% if selected_pickup == stop.location_id %}selected{% endif %}>
+                                                    {{ stop.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+
+                                        <i class="bi bi-arrow-right text-muted"></i>
+
+                                        <!-- Choose exact drop stop from this ride's stops -->
+                                        <select name="drop_location_id" class="form-select form-select-sm" required style="max-width: 180px;">
+                                            <option value="">Drop Stop...</option>
+                                            {% for stop in ride.stops[1:] %}
+                                                <option value="{{ stop.location_id }}" {% if selected_drop == stop.location_id %}selected{% endif %}>
+                                                    {{ stop.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <button type="submit" class="btn btn-success btn-sm px-3 fw-semibold book-btn" id="book-btn-{{ ride.ride_id }}" {% if ride.remaining_capacity <= 0 %}disabled{% endif %}>
+                                            <i class="bi bi-ticket-perforated-fill me-1"></i> Book Seat
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-search display-5 d-block mb-3 text-secondary"></i>
+                        <h5>No matching rides available at this time</h5>
+                        <p class="small">Try resetting your pickup/drop search filters or check back shortly.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Student's Personal Bookings (Access only his things) -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-bookmark-check-fill text-success me-2"></i> My Bookings
+                </h5>
+                <span class="badge bg-success rounded-pill">{{ my_bookings|length }}</span>
+            </div>
+
+            <div class="card-body p-3">
+                <div class="alert alert-light border small py-2 mb-3">
+                    <i class="bi bi-shield-lock-fill text-secondary me-1"></i>
+                    <strong>Privacy Guard:</strong> You are viewing exclusively your personal bookings.
+                </div>
+
+                {% if my_bookings %}
+                    <div class="d-flex flex-column gap-3">
+                        {% for b in my_bookings %}
+                        <div class="border rounded-3 p-3 bg-white">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span class="fw-bold">Booking #{{ b.booking_id }}</span>
+                                    <div class="small text-muted">Ride #{{ b.ride_id }}</div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge {% if b.booking_status == 'CONFIRMED' %}bg-success{% elif b.booking_status == 'COMPLETED' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                        {{ b.booking_status }}
+                                    </span>
+                                    <div class="badge bg-light text-dark border small mt-1">
+                                        {{ b.payment_status }} ({{ b.payment_method }})
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="small mb-2">
+                                <div class="text-dark fw-semibold">
+                                    <i class="bi bi-geo-alt text-primary"></i> {{ b.pickup_name }}
+                                </div>
+                                <div class="ps-3 text-muted">↓</div>
+                                <div class="text-dark fw-semibold">
+                                    <i class="bi bi-flag text-danger"></i> {{ b.drop_name }}
+                                </div>
+                            </div>
+
+                            <div class="small text-muted mb-2">
+                                <div><i class="bi bi-person me-1"></i> Driver: {{ b.driver_first_name }} {{ b.driver_last_name }}</div>
+                                <div><i class="bi bi-car-front me-1"></i> {{ b.vehicle_name }} ({{ b.vehicle_number }})</div>
+                                <div><i class="bi bi-clock me-1"></i> Dep: {{ b.departure_time }}</div>
+                                <div class="fw-bold text-dark mt-1">Fare: ₹{{ "%.2f"|format(b.fare) }}</div>
+                            </div>
+
+                            {% if b.booking_status == 'CONFIRMED' %}
+                            <form action="{{ url_for('student.cancel_booking', booking_id=b.booking_id) }}" method="POST" onsubmit="return confirm('Are you sure you want to cancel this booking? The seat will be restored to other students.');">
+                                <button type="submit" class="btn btn-outline-danger btn-sm w-100 py-1">
+                                    <i class="bi bi-x-circle me-1"></i> Cancel Booking (Restore Seat)
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4 text-muted small">
+                        <i class="bi bi-ticket-perforated display-6 d-block mb-2 text-secondary"></i>
+                        You have not booked any rides yet. Book from the available rides on the left!
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Live dynamic background polling to synchronize remaining seats across all student accounts
+function pollRideCapacities() {
+    fetch('/api/rides')
+        .then(res => res.json())
+        .then(rides => {
+            rides.forEach(r => {
+                const countElem = document.querySelector(`.remaining-count[data-ride-id="${r.ride_id}"]`);
+                const badgeElem = document.getElementById(`seats-badge-${r.ride_id}`);
+                const bookBtn = document.getElementById(`book-btn-${r.ride_id}`);
+
+                if (countElem) {
+                    const currentVal = parseInt(countElem.innerText);
+                    if (currentVal !== r.remaining_capacity) {
+                        // Flash effect to highlight live change
+                        countElem.innerText = r.remaining_capacity;
+                        if (badgeElem) {
+                            badgeElem.classList.add('bg-warning', 'text-dark');
+                            badgeElem.classList.remove('bg-success');
+                            setTimeout(() => {
+                                badgeElem.classList.remove('bg-warning', 'text-dark');
+                                badgeElem.classList.add('bg-success');
+                            }, 1200);
+                        }
+                    }
+                }
+
+                if (bookBtn) {
+                    if (r.remaining_capacity <= 0) {
+                        bookBtn.disabled = true;
+                        bookBtn.innerText = 'Fully Booked';
+                        bookBtn.classList.remove('btn-success');
+                        bookBtn.classList.add('btn-secondary');
+                    } else {
+                        bookBtn.disabled = false;
+                        bookBtn.innerHTML = '<i class="bi bi-ticket-perforated-fill me-1"></i> Book Seat';
+                        bookBtn.classList.add('btn-success');
+                        bookBtn.classList.remove('btn-secondary');
+                    }
+                }
+            });
+        })
+        .catch(err => console.debug('Polling sync error:', err));
+}
+
+// Poll every 3 seconds for instant multi-student reflection
+setInterval(pollRideCapacities, 3000);
+</script>
+{% endblock %}

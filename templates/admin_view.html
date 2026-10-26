@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}Admin DBMS Control Panel - CampusCommute{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Header -->
+    <div class="col-12 d-flex flex-wrap justify-content-between align-items-center border-bottom pb-3">
+        <div>
+            <h3 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-database-fill-gear text-danger me-2"></i> Admin DBMS Explorer & Node Manager
+            </h3>
+            <p class="text-muted mb-0 small">
+                Pre-decided Admin Account: <code>admin@campuscommute.edu</code> | Full DBMS Table Visibility & Control
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin.admin_reports') }}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-graph-up me-1"></i> DBMS Reports & Queries
+            </a>
+            <a href="{{ url_for('admin.admin_sql') }}" class="btn btn-outline-dark btn-sm">
+                <i class="bi bi-terminal me-1"></i> SQL Query Console
+            </a>
+            <form action="{{ url_for('admin.reset_demo_data') }}" method="POST" class="d-inline" onsubmit="return confirm('Remove all history? This wipes test rides, bookings, and payments back to a fresh 0-ride presentation state.');">
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset All History (0 Rides)
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 1. ADD CAMPUS LOCATION / NODE MANAGEMENT -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-dark text-white py-2 d-flex justify-content-between align-items-center">
+                <span class="fw-bold fs-7">
+                    <i class="bi bi-geo-alt-fill text-warning me-2"></i> Campus Location Nodes (Fixed & Dynamic)
+                </span>
+                <span class="badge bg-secondary">{{ locations|length }} Configured Nodes</span>
+            </div>
+
+            <div class="card-body p-3">
+                <div class="row g-3">
+                    <!-- Add Node Form -->
+                    <div class="col-lg-5 border-end pe-lg-4">
+                        <h6 class="fw-bold text-primary mb-2 small text-uppercase">
+                            <i class="bi bi-plus-circle me-1"></i> Add New Campus Location / Node
+                        </h6>
+                        <form action="{{ url_for('admin.add_location') }}" method="POST" class="row g-2">
+                            <div class="col-12">
+                                <label class="form-label fs-8 fw-semibold text-muted mb-1">Node / Location Name</label>
+                                <input type="text" class="form-control form-control-sm" name="name" placeholder="e.g. Sports Complex / South Gate" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fs-8 fw-semibold text-muted mb-1">Latitude (Optional)</label>
+                                <input type="number" step="0.0000001" class="form-control form-control-sm" name="latitude" placeholder="28.6912000">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fs-8 fw-semibold text-muted mb-1">Longitude (Optional)</label>
+                                <input type="number" step="0.0000001" class="form-control form-control-sm" name="longitude" placeholder="77.2155000">
+                            </div>
+                            <div class="col-12 mt-2">
+                                <button type="submit" class="btn btn-primary btn-sm w-100 fw-semibold">
+                                    <i class="bi bi-plus-lg me-1"></i> Insert Location into DBMS
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Fixed Nodes Badges List -->
+                    <div class="col-lg-7 ps-lg-4">
+                        <h6 class="fw-bold text-secondary mb-2 small text-uppercase">
+                            <i class="bi bi-pin-map me-1"></i> Current Campus Nodes in System
+                        </h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for loc in locations %}
+                                <div class="badge bg-light text-dark border p-2 text-start">
+                                    <span class="fw-bold text-primary">ID {{ loc.location_id }}:</span> {{ loc.name }}
+                                    {% if loc.latitude and loc.longitude %}
+                                        <div class="fs-9 text-muted font-monospace mt-1">({{ loc.latitude }}, {{ loc.longitude }})</div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. LIVE DBMS TABLES & VIEWS EXPLORER -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white py-3 border-bottom">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <h5 class="fw-bold mb-0">
+                        <i class="bi bi-table text-danger me-2"></i> Live DBMS Relational Tables Explorer
+                    </h5>
+                    <span class="badge bg-dark">Currently Viewing: <code>{{ selected_table }}</code> ({{ table_data|length }} rows)</span>
+                </div>
+
+                <!-- Table Navigation Tabs -->
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    {% for tbl in all_tables %}
+                        <a href="{{ url_for('admin.admin_dashboard', table=tbl) }}" 
+                           class="btn btn-sm {% if selected_table == tbl %}btn-danger fw-bold{% else %}btn-outline-secondary{% endif %}">
+                            {{ tbl }}
+                            <span class="badge {% if selected_table == tbl %}bg-light text-dark{% else %}bg-secondary{% endif %} ms-1">
+                                {{ table_counts.get(tbl, 0) }}
+                            </span>
+                        </a>
+                    {% endfor %}
+
+                    <span class="border-end mx-1"></span>
+
+                    <!-- DBMS Views -->
+                    {% for vw in all_views %}
+                        <a href="{{ url_for('admin.admin_dashboard', table=vw) }}" 
+                           class="btn btn-sm {% if selected_table == vw %}btn-info text-dark fw-bold{% else %}btn-outline-info{% endif %}">
+                            <i class="bi bi-eye me-1"></i> {{ vw }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card-body p-0">
+                {% if table_data %}
+                <div class="table-responsive" style="max-height: 520px;">
+                    <table class="table table-hover table-striped table-bordered align-middle mb-0 small">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                {% for col in columns %}
+                                    <th>{{ col }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in table_data %}
+                            <tr>
+                                {% for col in columns %}
+                                    <td>
+                                        {% if 'password' in col %}
+                                            <span class="font-monospace text-muted small">[Encrypted Hash]</span>
+                                        {% elif row[col] is none %}
+                                            <span class="badge bg-secondary-subtle text-secondary small">NULL</span>
+                                        {% elif 'status' in col %}
+                                            <span class="badge {% if row[col] in ['CONFIRMED', 'PUBLISHED', 'PAID'] %}bg-success{% elif row[col] in ['CANCELLED', 'FAILED'] %}bg-danger{% else %}bg-secondary{% endif %}">
+                                                {{ row[col] }}
+                                            </span>
+                                        {% else %}
+                                            {{ row[col] }}
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox display-6 d-block mb-2 text-secondary"></i>
+                    Table <code>{{ selected_table }}</code> is currently empty.
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-light py-2 text-muted small d-flex justify-content-between align-items-center">
+                <span>Total records in <code>{{ selected_table }}</code>: <strong>{{ table_data|length }}</strong></span>
+                <span class="fst-italic text-secondary">Enforces InnoDB/SQLite Foreign Keys, Triggers, and Constraints</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

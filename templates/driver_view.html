@@ -1,0 +1,397 @@
+{% extends 'base.html' %}
+{% block title %}Driver View - CampusCommute{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Header -->
+    <div class="col-12 d-flex flex-wrap justify-content-between align-items-center border-bottom pb-3">
+        <div>
+            <h3 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-steering-wheel text-success me-2"></i> Driver Dashboard
+            </h3>
+            <p class="text-muted mb-0 small">
+                Logged in as <strong>{{ session.get('first_name') }} {{ session.get('last_name') }}</strong> (Student ID: {{ session.get('user_id') }})
+            </p>
+        </div>
+        <div>
+            <a href="{{ url_for('student.student_dashboard') }}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Switch to Student Passenger View
+            </a>
+        </div>
+    </div>
+
+    {% if not driver_info %}
+    <!-- 1. DRIVER REGISTRATION REQUIRED (If student is not yet a driver) -->
+    <div class="col-lg-8 mx-auto">
+        <div class="card border-0 shadow-lg rounded-4">
+            <div class="card-header bg-dark text-white p-4 text-center rounded-top-4">
+                <div class="display-6 text-warning mb-2"><i class="bi bi-person-vcard-fill"></i></div>
+                <h4 class="fw-bold mb-1">Become a Campus Driver</h4>
+                <p class="text-white-50 small mb-0">Register your driving licence and vehicle to publish rides and earn fares</p>
+            </div>
+
+            <div class="card-body p-4">
+                <form action="{{ url_for('driver.register_driver') }}" method="POST">
+                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-card-heading me-1"></i> 1. Licence Details</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold" for="licence_id">Driving Licence ID <span class="badge bg-secondary small">UNIQUE</span></label>
+                            <input type="text" class="form-control" id="licence_id" name="licence_id" placeholder="e.g. DL-1420110012345" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold" for="licence_expiry_date">Licence Expiry Date</label>
+                            <input type="date" class="form-control" id="licence_expiry_date" name="licence_expiry_date" min="{{ today }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold" for="upi_id">UPI ID for Fare Sharing</label>
+                            <input type="text" class="form-control" id="upi_id" name="upi_id" placeholder="e.g. user@okaxis">
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-car-front-fill me-1"></i> 2. Vehicle Registration</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold" for="vehicle_number">Vehicle Plate Number <span class="badge bg-secondary small">PK</span></label>
+                            <input type="text" class="form-control" id="vehicle_number" name="vehicle_number" placeholder="e.g. DL-01-AB-1234" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold" for="vehicle_name">Make & Model</label>
+                            <input type="text" class="form-control" id="vehicle_name" name="vehicle_name" placeholder="e.g. Honda City" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold" for="vehicle_type">Vehicle Type</label>
+                            <select class="form-select" id="vehicle_type" name="vehicle_type" required>
+                                <option value="Sedan">Sedan</option>
+                                <option value="Hatchback">Hatchback</option>
+                                <option value="SUV">SUV</option>
+                                <option value="Electric/EV">Electric / EV</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold" for="vehicle_colour">Colour</label>
+                            <input type="text" class="form-control" id="vehicle_colour" name="vehicle_colour" placeholder="e.g. Silver">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold" for="year_of_manufacture">Manufacturing Year</label>
+                            <input type="number" class="form-control" id="year_of_manufacture" name="year_of_manufacture" placeholder="2022" min="2000" max="2027">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold" for="capacity">Passenger Capacity <span class="badge bg-secondary small">CHECK > 0</span></label>
+                            <input type="number" class="form-control" id="capacity" name="capacity" value="4" min="1" max="8" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100 py-2 fw-semibold shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> Complete Driver & Vehicle Registration
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- 2. REGISTERED DRIVER INTERFACE -->
+
+    <!-- Driver Info Banner -->
+    <div class="col-12">
+        <div class="p-3 bg-white border rounded-3 shadow-sm d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="fs-2 text-success"><i class="bi bi-shield-check"></i></div>
+                <div>
+                    <h5 class="fw-bold mb-0">Registered Driver: {{ driver_info.first_name }} {{ driver_info.last_name }}</h5>
+                    <div class="small text-muted">
+                        Licence: <code>{{ driver_info.licence_id }}</code> | Valid until: <strong>{{ driver_info.licence_expiry_date }}</strong> | UPI: <strong>{{ driver_info.upi_id or 'Not specified' }}</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#addVehicleCollapse">
+                    <i class="bi bi-plus-circle me-1"></i> Add Another Vehicle
+                </button>
+            </div>
+        </div>
+
+        <!-- Add Vehicle Collapse Form -->
+        <div class="collapse mt-3" id="addVehicleCollapse">
+            <div class="card card-body border-0 shadow-sm">
+                <h6 class="fw-bold mb-3"><i class="bi bi-car-front me-1"></i> Register New Vehicle</h6>
+                <form action="{{ url_for('driver.add_vehicle') }}" method="POST" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Plate Number</label>
+                        <input type="text" class="form-control form-control-sm" name="vehicle_number" placeholder="DL-04-CD-5678" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Model Name</label>
+                        <input type="text" class="form-control form-control-sm" name="vehicle_name" placeholder="Maruti Swift" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Type</label>
+                        <select class="form-select form-select-sm" name="vehicle_type" required>
+                            <option value="Hatchback">Hatchback</option>
+                            <option value="Sedan">Sedan</option>
+                            <option value="SUV">SUV</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Capacity</label>
+                        <input type="number" class="form-control form-control-sm" name="capacity" value="3" min="1" max="8" required>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary btn-sm w-100">Save Vehicle</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- PUBLISH A RIDE CARD -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-dark text-white py-3">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-plus-square-fill text-warning me-2"></i> Publish a New Ride
+                </h5>
+            </div>
+
+            <div class="card-body p-4">
+                <form action="{{ url_for('driver.publish_ride') }}" method="POST" id="publishRideForm">
+                    <!-- Vehicle Selection -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold" for="pub_vehicle">Select Vehicle</label>
+                        <select class="form-select" id="pub_vehicle" name="vehicle_number" required>
+                            {% for v in vehicles %}
+                                <option value="{{ v.vehicle_number }}" data-cap="{{ v.capacity }}">
+                                    {{ v.name }} ({{ v.vehicle_number }}) - Max {{ v.capacity }} seats
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Departure Time -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold" for="pub_departure">Departure Date & Time</label>
+                        <input type="datetime-local" class="form-control" id="pub_departure" name="departure_time" required>
+                    </div>
+
+                    <!-- Seat Capacity & Fare -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold" for="pub_capacity">Seats to Offer</label>
+                            <input type="number" class="form-control" id="pub_capacity" name="total_capacity" value="3" min="1" max="8" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold" for="pub_fare">Fare / Passenger (₹)</label>
+                            <input type="number" step="0.5" class="form-control" id="pub_fare" name="fare_per_passenger" value="50.00" min="0" required>
+                        </div>
+                    </div>
+
+                    <!-- ROUTE BUILDER WITH INTERMEDIATE STOPS -->
+                    <div class="border rounded-3 p-3 bg-light mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold small text-secondary text-uppercase">
+                                <i class="bi bi-signpost-split me-1"></i> Ordered Route Stops
+                            </span>
+                            <button type="button" class="btn btn-xs btn-outline-primary" id="addIntermediateBtn">
+                                <i class="bi bi-plus-lg me-1"></i> Add Intermediate Stop
+                            </button>
+                        </div>
+
+                        <!-- 1. Start Point -->
+                        <div class="mb-2">
+                            <label class="form-label fs-8 text-muted mb-1 fw-bold">1. START POINT (Departure)</label>
+                            <select class="form-select form-select-sm" name="start_point" id="start_point" required>
+                                <option value="">Select Start Location...</option>
+                                {% for loc in locations %}
+                                    <option value="{{ loc.location_id }}">{{ loc.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Container for dynamic intermediate stops -->
+                        <div id="intermediateStopsContainer"></div>
+
+                        <!-- 2. End Destination -->
+                        <div class="mt-2">
+                            <label class="form-label fs-8 text-muted mb-1 fw-bold">FINAL DESTINATION (Drop-off)</label>
+                            <select class="form-select form-select-sm" name="end_point" id="end_point" required>
+                                <option value="">Select Destination...</option>
+                                {% for loc in locations %}
+                                    <option value="{{ loc.location_id }}">{{ loc.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-warning w-100 py-2 fw-bold shadow-sm">
+                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> Publish Ride to Campus
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- DRIVER'S PUBLISHED RIDES & PASSENGER MANIFESTS (Only see info of his rides) -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-list-check text-primary me-2"></i> My Published Rides & Manifests
+                </h5>
+                <span class="badge bg-primary rounded-pill">{{ my_rides|length }} Rides</span>
+            </div>
+
+            <div class="card-body p-3">
+                <div class="alert alert-light border small py-2 mb-3">
+                    <i class="bi bi-eye-slash-fill text-secondary me-1"></i>
+                    <strong>Driver Access Rule:</strong> You can strictly view only rides published by you and passengers booked for your rides.
+                </div>
+
+                {% if my_rides %}
+                    <div class="d-flex flex-column gap-4">
+                        {% for r in my_rides %}
+                        <div class="border rounded-3 p-3 bg-white">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                                <div>
+                                    <span class="badge bg-dark">Ride #{{ r.ride_id }}</span>
+                                    <span class="fw-bold text-dark ms-1">{{ r.vehicle_name }} ({{ r.vehicle_number }})</span>
+                                </div>
+                                <div>
+                                    <span class="badge {% if r.remaining_capacity > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ r.remaining_capacity }} / {{ r.total_capacity }} Seats Remaining
+                                    </span>
+                                    <span class="badge bg-primary ms-1">Fare: ₹{{ "%.2f"|format(r.fare_per_passenger) }}</span>
+                                </div>
+                            </div>
+
+                            <div class="small text-muted mb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                <div>
+                                    <i class="bi bi-clock-history me-1"></i> Departure: <strong>{{ r.departure_time }}</strong> | Status: 
+                                    <span class="badge {% if r.status == 'PUBLISHED' %}bg-info text-dark{% elif r.status == 'COMPLETED' %}bg-success text-white{% else %}bg-secondary{% endif %}">{{ r.status }}</span>
+                                </div>
+                                {% if r.status == 'PUBLISHED' %}
+                                <form action="{{ url_for('driver.complete_ride', ride_id=r.ride_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Complete this ride? All confirmed passenger bookings will be finalized as COMPLETED.');">
+                                    <button type="submit" class="btn btn-sm btn-outline-success py-1 px-2 fw-semibold">
+                                        <i class="bi bi-flag-fill me-1"></i> End / Complete Ride
+                                    </button>
+                                </form>
+                                {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary border small">
+                                    <i class="bi bi-check2-all me-1"></i> Trip Concluded
+                                </span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Stops Sequence -->
+                            <div class="p-2 bg-light rounded-2 small mb-3">
+                                <span class="text-secondary fw-semibold">Route Path: </span>
+                                {% for s in r.stops %}
+                                    <span class="badge bg-white text-dark border">{{ s.sequence_no }}. {{ s.name }}</span>
+                                    {% if not loop.last %}<i class="bi bi-arrow-right text-muted mx-1"></i>{% endif %}
+                                {% endfor %}
+                            </div>
+
+                            <!-- Passenger Manifest Table for this Ride -->
+                            <div class="border-top pt-2">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold fs-7 text-dark">
+                                        <i class="bi bi-people-fill text-primary me-1"></i> Booked Passenger Manifest ({{ r.passengers|length }})
+                                    </span>
+                                </div>
+
+                                {% if r.passengers %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered align-middle mb-0 small">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Passenger Name</th>
+                                                <th>Phone</th>
+                                                <th>Pickup → Drop</th>
+                                                <th>Status</th>
+                                                <th>Payment</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for p in r.passengers %}
+                                            <tr>
+                                                <td>{{ p.booking_id }}</td>
+                                                <td class="fw-semibold">{{ p.first_name }} {{ p.last_name }}</td>
+                                                <td>{{ p.phone_number }}</td>
+                                                <td>
+                                                    <span class="text-primary">{{ p.pickup_name }}</span> → <span class="text-danger">{{ p.drop_name }}</span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge {% if p.booking_status == 'CONFIRMED' %}bg-success{% else %}bg-secondary{% endif %}">
+                                                        {{ p.booking_status }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-light text-dark border">{{ p.payment_status }}</span>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="text-muted small p-2 bg-light rounded text-center">
+                                    No passenger bookings yet. As soon as a student books, they will appear here!
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-car-front display-5 d-block mb-3 text-secondary"></i>
+                        <h5>No rides published yet</h5>
+                        <p class="small">Use the form on the left to publish your first campus commute ride!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Dynamic Intermediate Stop Adder
+let stopCount = 0;
+const locationsJson = [
+    {% for loc in locations %}
+    { id: {{ loc.location_id }}, name: "{{ loc.name }}" },
+    {% endfor %}
+];
+
+document.getElementById('addIntermediateBtn')?.addEventListener('click', function() {
+    stopCount++;
+    const container = document.getElementById('intermediateStopsContainer');
+    const div = document.createElement('div');
+    div.className = 'mb-2 d-flex align-items-center gap-1 intermediate-row';
+    div.id = `intermediate-row-${stopCount}`;
+
+    let options = '<option value="">Select Intermediate Stop...</option>';
+    locationsJson.forEach(l => {
+        options += `<option value="${l.id}">${l.name}</option>`;
+    });
+
+    div.innerHTML = `
+        <div class="flex-grow-1">
+            <label class="form-label fs-8 text-muted mb-0 fw-bold">INTERMEDIATE STOP</label>
+            <select class="form-select form-select-sm" name="intermediate_points[]" required>
+                ${options}
+            </select>
+        </div>
+        <div class="pt-3">
+            <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('.intermediate-row').remove()">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(div);
+});
+</script>
+{% endblock %}

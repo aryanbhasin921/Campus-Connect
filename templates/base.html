@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CampusCommute{% endblock %} | Student Mobility & Ride-Sharing</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-light d-flex flex-column min-vh-100">
+
+    <!-- Top Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm">
+        <div class="container-fluid px-lg-4">
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ url_for('student.home') }}">
+                <span class="fs-4 text-warning"><i class="bi bi-car-front-fill"></i></span>
+                <span>CampusCommute</span>
+                <span class="badge bg-secondary text-uppercase ms-1 fs-8">DBMS Demo</span>
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarContent">
+                {% if session.get('user_id') %}
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <!-- Passenger / Student Link -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'student.student_dashboard' %}active text-warning fw-semibold{% endif %}" href="{{ url_for('student.student_dashboard') }}">
+                            <i class="bi bi-search me-1"></i> Student View (Find & Book)
+                        </a>
+                    </li>
+
+                    <!-- Driver Link -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'driver.driver_dashboard' %}active text-warning fw-semibold{% endif %}" href="{{ url_for('driver.driver_dashboard') }}">
+                            <i class="bi bi-compass me-1"></i> Driver View (Publish & Manifest)
+                        </a>
+                    </li>
+
+                    <!-- Admin Link (Visible to Admin only) -->
+                    {% if session.get('role') == 'ADMIN' %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-info fw-semibold" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-shield-lock-fill me-1"></i> Admin View (DBMS)
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-dark">
+                            <li><a class="dropdown-item" href="{{ url_for('admin.admin_dashboard') }}"><i class="bi bi-table me-2"></i> 10 DBMS Tables & Nodes</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin.admin_reports') }}"><i class="bi bi-graph-up me-2"></i> DBMS Analytical Reports</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin.admin_sql') }}"><i class="bi bi-terminal me-2"></i> Live SQL Query Console</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                </ul>
+
+                <!-- User profile & Quick Mode Switcher -->
+                <div class="d-flex align-items-center gap-3">
+                    <!-- Mode badge / switch -->
+                    {% if session.get('role') != 'ADMIN' %}
+                        {% if session.get('is_driver') %}
+                            {% if session.get('current_mode') == 'DRIVER' %}
+                                <form action="{{ url_for('auth.switch_mode', mode='PASSENGER') }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning">
+                                        <i class="bi bi-arrow-left-right me-1"></i> Mode: Driver (Switch to Passenger)
+                                    </button>
+                                </form>
+                            {% else %}
+                                <form action="{{ url_for('auth.switch_mode', mode='DRIVER') }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-info">
+                                        <i class="bi bi-arrow-left-right me-1"></i> Mode: Passenger (Switch to Driver)
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge bg-secondary text-light px-2 py-1">Student Mode</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="badge bg-danger text-light px-2 py-1"><i class="bi bi-shield-shaded me-1"></i> System Admin</span>
+                    {% endif %}
+
+                    <div class="text-white-50 text-end small">
+                        <span class="text-white fw-bold">{{ session.get('first_name') }} {{ session.get('last_name') }}</span>
+                        <div class="fs-8 text-light">{{ session.get('email') }}</div>
+                    </div>
+
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </div>
+
+                {% else %}
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.login') }}"><i class="bi bi-box-arrow-in-right me-1"></i> Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-primary text-white btn-sm px-3 ms-2" href="{{ url_for('auth.register') }}">Register</a>
+                    </li>
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Quick Demo Accounts Helper Bar -->
+    <div class="bg-primary-subtle border-bottom py-1 small">
+        <div class="container-fluid px-lg-4 d-flex flex-wrap justify-content-between align-items-center">
+            <div>
+                <strong class="text-primary"><i class="bi bi-info-circle me-1"></i> Demo Accounts Ready:</strong>
+                <span class="ms-2">Student 1: <code>passenger@campuscommute.edu</code></span>
+                <span class="ms-2">Student 2: <code>riya@campuscommute.edu</code></span>
+                <span class="ms-2">Driver: <code>driver@campuscommute.edu</code> (Pwd: <code>password123</code>)</span>
+                <span class="ms-2">Admin: <code>admin@campuscommute.edu</code> (Pwd: <code>admin123</code>)</span>
+            </div>
+            <div class="text-muted">
+                <span class="badge bg-success">Live Dynamic Sync Active</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <main class="container-fluid px-lg-4 py-4 flex-grow-1">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                        {% if category == 'success' %}<i class="bi bi-check-circle-fill me-2"></i>{% endif %}
+                        {% if category == 'danger' %}<i class="bi bi-exclamation-triangle-fill me-2"></i>{% endif %}
+                        {% if category == 'warning' %}<i class="bi bi-exclamation-circle-fill me-2"></i>{% endif %}
+                        {% if category == 'info' %}<i class="bi bi-info-circle-fill me-2"></i>{% endif %}
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white-50 py-3 mt-auto border-top border-secondary">
+        <div class="container-fluid px-lg-4 d-flex flex-wrap justify-content-between align-items-center small">
+            <div>
+                <strong>CampusCommute</strong> &copy; 2026 — Student Mobility & Ride-Sharing System.
+                <span class="text-secondary ms-2">MySQL / InnoDB & SQLite DBMS Implementation</span>
+            </div>
+            <div>
+                <span class="badge bg-secondary me-1">10 Relational Tables</span>
+                <span class="badge bg-secondary me-1">ACID Transactions</span>
+                <span class="badge bg-secondary me-1">DBMS Triggers</span>
+                <span class="badge bg-secondary">DBMS Views</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom Application JS -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+{% block title %}DBMS Analytical Reports - CampusCommute{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Header -->
+    <div class="col-12 d-flex flex-wrap justify-content-between align-items-center border-bottom pb-3">
+        <div>
+            <h3 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-graph-up text-primary me-2"></i> DBMS Analytical Queries & Reports
+            </h3>
+            <p class="text-muted mb-0 small">
+                Pre-built DBMS queries demonstrating Multi-table JOINs, GROUP BY, Aggregate functions, LEFT JOINs, and Subqueries.
+            </p>
+        </div>
+        <div>
+            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to All DBMS Tables
+            </a>
+        </div>
+    </div>
+
+    <!-- Query 1: Rides with Driver & Vehicle -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3 h-100">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <span class="badge bg-primary me-2">Query 1</span> Rides with Driver & Vehicle (4-Table JOIN)
+                </h6>
+                <span class="badge bg-light text-secondary border">{{ rep1|length }} rows</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ride ID</th>
+                                <th>Driver</th>
+                                <th>Vehicle</th>
+                                <th>Plate</th>
+                                <th>Seats Left</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in rep1 %}
+                            <tr>
+                                <td>#{{ r.ride_id }}</td>
+                                <td class="fw-semibold">{{ r.first_name }} {{ r.last_name }}</td>
+                                <td>{{ r.vehicle_name }}</td>
+                                <td><code>{{ r.vehicle_number }}</code></td>
+                                <td>
+                                    <span class="badge bg-success">{{ r.remaining_capacity }} / {{ r.total_capacity }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Query 2: Confirmed Bookings & Revenue per Ride -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3 h-100">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <span class="badge bg-success me-2">Query 2</span> Confirmed Bookings & Revenue Per Ride (GROUP BY)
+                </h6>
+                <span class="badge bg-light text-secondary border">{{ rep2|length }} rows</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ride ID</th>
+                                <th>Total Bookings</th>
+                                <th>Total Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in rep2 %}
+                            <tr>
+                                <td>#{{ r.ride_id }}</td>
+                                <td><span class="badge bg-primary">{{ r.total_bookings }} passengers</span></td>
+                                <td class="fw-bold text-success">₹{{ "%.2f"|format(r.total_revenue) }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="3" class="text-center text-muted py-3">No confirmed bookings yet</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Query 3: Popular Pickup Locations -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3 h-100">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <span class="badge bg-warning text-dark me-2">Query 3</span> Popular Pickup Nodes (JOIN & ORDER BY DESC)
+                </h6>
+                <span class="badge bg-light text-secondary border">{{ rep3|length }} rows</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Node ID</th>
+                                <th>Location Name</th>
+                                <th>Total Pickups</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in rep3 %}
+                            <tr>
+                                <td>{{ r.location_id }}</td>
+                                <td class="fw-semibold">{{ r.pickup_location }}</td>
+                                <td><span class="badge bg-danger rounded-pill">{{ r.total_pickups }} Pickups</span></td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="3" class="text-center text-muted py-3">No pickups recorded yet</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Query 4: Driver Earnings -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3 h-100">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <span class="badge bg-info text-dark me-2">Query 4</span> Driver Earnings / Fares Summary
+                </h6>
+                <span class="badge bg-light text-secondary border">{{ rep4|length }} rows</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Driver ID</th>
+                                <th>Driver Name</th>
+                                <th>Rides Booked</th>
+                                <th>Total Fares Accrued</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in rep4 %}
+                            <tr>
+                                <td>{{ r.driver_id }}</td>
+                                <td class="fw-semibold">{{ r.driver_name }}</td>
+                                <td>{{ r.total_rides_booked }}</td>
+                                <td class="fw-bold text-success">₹{{ "%.2f"|format(r.total_fares) }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-muted py-3">No fares recorded yet</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Query 5: Payment & Transaction Audit Log -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3 h-100">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <span class="badge bg-secondary me-2">Query 5</span> Payment History (LEFT JOIN)
+                </h6>
+                <span class="badge bg-light text-secondary border">{{ rep5|length }} rows</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Booking #</th>
+                                <th>Student</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in rep5 %}
+                            <tr>
+                                <td>#{{ r.booking_id }}</td>
+                                <td>{{ r.student_name }}</td>
+                                <td class="fw-bold">₹{{ "%.2f"|format(r.fare) }}</td>
+                                <td><code>{{ r.payment_method or 'N/A' }}</code></td>
+                                <td>
+                                    <span class="badge {% if r.payment_status == 'PAID' %}bg-success{% elif r.payment_status == 'REFUNDED' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                        {{ r.payment_status or 'UNPAID' }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Query 7: Seat Utilisation Percentage -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3 h-100">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <span class="badge bg-dark me-2">Query 7</span> Seat Utilisation Rate (%)
+                </h6>
+                <span class="badge bg-light text-secondary border">{{ rep7|length }} rows</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ride ID</th>
+                                <th>Total Seats</th>
+                                <th>Seats Booked</th>
+                                <th>Utilisation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in rep7 %}
+                            <tr>
+                                <td>#{{ r.ride_id }}</td>
+                                <td>{{ r.total_capacity }}</td>
+                                <td>{{ r.seats_booked }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-grow-1" style="height: 6px;">
+                                            <div class="progress-bar bg-success" style="width: {{ r.utilisation_percentage }}%;"></div>
+                                        </div>
+                                        <span class="small fw-bold">{{ r.utilisation_percentage }}%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
