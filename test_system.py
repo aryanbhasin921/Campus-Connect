@@ -4,7 +4,7 @@ import json
 from app import create_app
 from database.sqlite_init import init_sqlite_db
 
-class CampusCommuteTestCase(unittest.TestCase):
+class CampusConnectTestCase(unittest.TestCase):
     def setUp(self):
         # Reset DB for test consistency
         init_sqlite_db(force_reset=True)
@@ -20,7 +20,7 @@ class CampusCommuteTestCase(unittest.TestCase):
 
     def test_01_predecided_admin_login(self):
         """Test pre-decided admin login and access to all DBMS tables"""
-        response = self.login('admin@campuscommute.edu', 'admin123')
+        response = self.login('admin@campusconnect.edu', 'admin123')
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'Admin DBMS Explorer', response.data)
         self.assertIn(b'students', response.data)
@@ -33,7 +33,7 @@ class CampusCommuteTestCase(unittest.TestCase):
             'first_name': 'Test',
             'last_name': 'User',
             'phone_number': '9998887776',
-            'email': 'testuser@campuscommute.edu',
+            'email': 'testuser@campusconnect.edu',
             'password': 'password123'
         }, follow_redirects=True)
         self.assertIn(b'Registration successful', res1.data)
@@ -43,14 +43,14 @@ class CampusCommuteTestCase(unittest.TestCase):
             'first_name': 'Test2',
             'last_name': 'User2',
             'phone_number': '1112223334',
-            'email': 'testuser@campuscommute.edu',
+            'email': 'testuser@campusconnect.edu',
             'password': 'password123'
         }, follow_redirects=True)
         self.assertIn(b'already exists', res2.data)
 
     def _publish_test_ride(self):
         """Helper to publish a ride for tests"""
-        self.login('driver@campuscommute.edu', 'password123')
+        self.login('driver@campusconnect.edu', 'password123')
         return self.client.post('/rides/publish', data={
             'vehicle_number': 'DL-01-AB-1234',
             'departure_time': '2026-12-01T10:00',
@@ -72,7 +72,7 @@ class CampusCommuteTestCase(unittest.TestCase):
         self._publish_test_ride()
 
         # Student 2 (Riya) logs in
-        self.login('riya@campuscommute.edu', 'password123')
+        self.login('riya@campusconnect.edu', 'password123')
         
         # Check API rides before booking
         api_res1 = self.client.get('/api/rides')
@@ -90,7 +90,7 @@ class CampusCommuteTestCase(unittest.TestCase):
         self.assertIn(b'Seat booked successfully', book_res.data)
 
         # Student 1 (Rahul) checks API / sees dynamic updated remaining capacity
-        self.login('passenger@campuscommute.edu', 'password123')
+        self.login('passenger@campusconnect.edu', 'password123')
         api_res2 = self.client.get('/api/rides')
         rides2 = json.loads(api_res2.data)
         ride1_after = next(r for r in rides2 if r['ride_id'] == ride1['ride_id'])
@@ -102,7 +102,7 @@ class CampusCommuteTestCase(unittest.TestCase):
         self._publish_test_ride()
 
         # Book seat
-        self.login('passenger@campuscommute.edu', 'password123')
+        self.login('passenger@campusconnect.edu', 'password123')
         self.client.post('/bookings/create', data={
             'ride_id': 1,
             'pickup_location_id': 1,
@@ -122,7 +122,7 @@ class CampusCommuteTestCase(unittest.TestCase):
 
     def test_06_admin_add_campus_node(self):
         """Test admin adding a new campus location node"""
-        self.login('admin@campuscommute.edu', 'admin123')
+        self.login('admin@campusconnect.edu', 'admin123')
         res = self.client.post('/admin/locations/add', data={
             'name': 'Indoor Sports Arena',
             'latitude': 28.6945,
@@ -132,7 +132,7 @@ class CampusCommuteTestCase(unittest.TestCase):
 
     def test_07_admin_reports_and_views(self):
         """Test admin analytical reports and SQL queries"""
-        self.login('admin@campuscommute.edu', 'admin123')
+        self.login('admin@campusconnect.edu', 'admin123')
         res = self.client.get('/admin/reports')
         self.assertEqual(res.status_code, 200)
         self.assertIn(b'Rides with Driver', res.data)
@@ -141,7 +141,7 @@ class CampusCommuteTestCase(unittest.TestCase):
     def test_08_driver_ends_ride_completion(self):
         """Test driver ending/completing a ride and updating passenger bookings"""
         self._publish_test_ride()
-        self.login('driver@campuscommute.edu', 'password123')
+        self.login('driver@campusconnect.edu', 'password123')
         # Complete ride 1
         res = self.client.post('/rides/complete/1', follow_redirects=True)
         self.assertIn(b'successfully completed', res.data)

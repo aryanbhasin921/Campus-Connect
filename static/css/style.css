@@ -1,0 +1,51 @@
+/* CampusConnect Custom Styling */
+:root {
+    --primary-color: #0d6efd;
+    --success-color: #198754;
+    --dark-bg: #212529;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #333333;
+}
+
+.fs-7 {
+    font-size: 0.9rem;
+}
+
+.fs-8 {
+    font-size: 0.8rem;
+}
+
+.fs-9 {
+    font-size: 0.72rem;
+}
+
+.shadow-xs {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.hover-shadow {
+    transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.hover-shadow:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+.spin-icon {
+    display: inline-block;
+    animation: spin 3s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.btn-xs {
+    padding: 0.18rem 0.45rem;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+}

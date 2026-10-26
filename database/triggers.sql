@@ -1,8 +1,8 @@
 -- ========================================================
--- CampusCommute Database Triggers (Blueprint Section 8)
+-- CampusConnect Database Triggers (Blueprint Section 8)
 -- ========================================================
 
-USE campuscommute;
+USE campusconnect;
 
 DELIMITER $$
 

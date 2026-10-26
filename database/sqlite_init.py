@@ -3,7 +3,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'campuscommute.db')
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'campusconnect.db')
 
 def init_sqlite_db(force_reset=False):
     if force_reset and os.path.exists(DB_PATH):
@@ -227,11 +227,11 @@ def init_sqlite_db(force_reset=False):
         INSERT INTO students (student_id, first_name, last_name, phone_number, email, password_hash, role, current_mode)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?);
         """, [
-            (1, 'Admin', 'User', '9999900000', 'admin@campuscommute.edu', admin_hash, 'ADMIN', 'PASSENGER'),
-            (2, 'Rahul', 'Sharma', '9811122233', 'passenger@campuscommute.edu', pass_hash, 'STUDENT', 'PASSENGER'),
-            (3, 'Riya', 'Patel', '9822233344', 'riya@campuscommute.edu', pass_hash, 'STUDENT', 'PASSENGER'),
-            (4, 'Arjun', 'Verma', '9833344455', 'driver@campuscommute.edu', pass_hash, 'STUDENT', 'DRIVER'),
-            (5, 'Kavita', 'Rao', '9844455566', 'driver2@campuscommute.edu', pass_hash, 'STUDENT', 'DRIVER')
+            (1, 'Admin', 'User', '9999900000', 'admin@campusconnect.edu', admin_hash, 'ADMIN', 'PASSENGER'),
+            (2, 'Rahul', 'Sharma', '9811122233', 'passenger@campusconnect.edu', pass_hash, 'STUDENT', 'PASSENGER'),
+            (3, 'Riya', 'Patel', '9822233344', 'riya@campusconnect.edu', pass_hash, 'STUDENT', 'PASSENGER'),
+            (4, 'Arjun', 'Verma', '9833344455', 'driver@campusconnect.edu', pass_hash, 'STUDENT', 'DRIVER'),
+            (5, 'Kavita', 'Rao', '9844455566', 'driver2@campusconnect.edu', pass_hash, 'STUDENT', 'DRIVER')
         ])
 
         # 2. Drivers

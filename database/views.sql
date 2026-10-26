@@ -1,8 +1,8 @@
 -- ========================================================
--- CampusCommute Database Views (Blueprint Section 8)
+-- CampusConnect Database Views (Blueprint Section 8)
 -- ========================================================
 
-USE campuscommute;
+USE campusconnect;
 
 -- 1. Confirmed Bookings View
 CREATE OR REPLACE VIEW confirmed_bookings_view AS

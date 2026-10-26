@@ -1,8 +1,8 @@
 #!/bin/bash
-# CampusCommute: One-Click Restart & Reset Script
+# CampusConnect: One-Click Restart & Reset Script
 
 echo "=================================================="
-echo "Restarting CampusCommute..."
+echo "Restarting CampusConnect..."
 echo "=================================================="
 
 # 1. Stop any currently running server instances on port 5050
@@ -17,7 +17,7 @@ echo "Resetting database to 0 rides (presentation ready)..."
 .venv/bin/python database/sqlite_init.py
 
 # 3. Start the Flask application
-echo "Starting CampusCommute on http://localhost:5050 ..."
-echo "Pre-decided Admin: admin@campuscommute.edu | Password: admin123"
+echo "Starting CampusConnect on http://localhost:5050 ..."
+echo "Pre-decided Admin: admin@campusconnect.edu | Password: admin123"
 echo "=================================================="
 .venv/bin/python app.py

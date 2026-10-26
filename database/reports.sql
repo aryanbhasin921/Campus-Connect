@@ -1,8 +1,8 @@
 -- ========================================================
--- CampusCommute Analytical DBMS Reports (Blueprint Section 7)
+-- CampusConnect Analytical DBMS Reports (Blueprint Section 7)
 -- ========================================================
 
-USE campuscommute;
+USE campusconnect;
 
 -- 1. Rides with Driver and Vehicle Details
 SELECT 

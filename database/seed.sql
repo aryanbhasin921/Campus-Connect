@@ -1,16 +1,16 @@
 -- ========================================================
--- CampusCommute Seed Data (MySQL 8.x)
+-- CampusConnect Seed Data (MySQL 8.x)
 -- ========================================================
 
-USE campuscommute;
+USE campusconnect;
 
 -- 1. Seed Students (Admin, Passengers, Drivers)
 INSERT INTO students (student_id, first_name, last_name, phone_number, email, password_hash, role, current_mode) VALUES
-(1, 'Admin', 'User', '9999900000', 'admin@campuscommute.edu', 'scrypt:32768:8:1$JPbjtzMFVbcxGSlN$e5df27551e8f9e928324a09d960f2708ef66a97413fc4f911fed983df385f818959397d2cedf7d40e72963090f766cf0cc52be39953b59dc77eb0409edc88dea', 'ADMIN', 'PASSENGER'),
-(2, 'Rahul', 'Sharma', '9811122233', 'passenger@campuscommute.edu', 'scrypt:32768:8:1$53bswvkg8Azu3sS8$6c5f1adfb6f853f8beef4264b5bf4a24123c43b00d854eb05777b83b5cc9815c52dfcb4b94cae06a91cb0fce77ac8fb9d913098e1f1176c996ac2ea80bd697f6', 'STUDENT', 'PASSENGER'),
-(3, 'Riya', 'Patel', '9822233344', 'riya@campuscommute.edu', 'scrypt:32768:8:1$53bswvkg8Azu3sS8$6c5f1adfb6f853f8beef4264b5bf4a24123c43b00d854eb05777b83b5cc9815c52dfcb4b94cae06a91cb0fce77ac8fb9d913098e1f1176c996ac2ea80bd697f6', 'STUDENT', 'PASSENGER'),
-(4, 'Arjun', 'Verma', '9833344455', 'driver@campuscommute.edu', 'scrypt:32768:8:1$53bswvkg8Azu3sS8$6c5f1adfb6f853f8beef4264b5bf4a24123c43b00d854eb05777b83b5cc9815c52dfcb4b94cae06a91cb0fce77ac8fb9d913098e1f1176c996ac2ea80bd697f6', 'STUDENT', 'DRIVER'),
-(5, 'Kavita', 'Rao', '9844455566', 'driver2@campuscommute.edu', 'scrypt:32768:8:1$53bswvkg8Azu3sS8$6c5f1adfb6f853f8beef4264b5bf4a24123c43b00d854eb05777b83b5cc9815c52dfcb4b94cae06a91cb0fce77ac8fb9d913098e1f1176c996ac2ea80bd697f6', 'STUDENT', 'DRIVER')
+(1, 'Admin', 'User', '9999900000', 'admin@campusconnect.edu', 'scrypt:32768:8:1$JPbjtzMFVbcxGSlN$e5df27551e8f9e928324a09d960f2708ef66a97413fc4f911fed983df385f818959397d2cedf7d40e72963090f766cf0cc52be39953b59dc77eb0409edc88dea', 'ADMIN', 'PASSENGER'),
+(2, 'Rahul', 'Sharma', '9811122233', 'passenger@campusconnect.edu', 'scrypt:32768:8:1$53bswvkg8Azu3sS8$6c5f1adfb6f853f8beef4264b5bf4a24123c43b00d854eb05777b83b5cc9815c52dfcb4b94cae06a91cb0fce77ac8fb9d913098e1f1176c996ac2ea80bd697f6', 'STUDENT', 'PASSENGER'),
+(3, 'Riya', 'Patel', '9822233344', 'riya@campusconnect.edu', 'scrypt:32768:8:1$53bswvkg8Azu3sS8$6c5f1adfb6f853f8beef4264b5bf4a24123c43b00d854eb05777b83b5cc9815c52dfcb4b94cae06a91cb0fce77ac8fb9d913098e1f1176c996ac2ea80bd697f6', 'STUDENT', 'PASSENGER'),
+(4, 'Arjun', 'Verma', '9833344455', 'driver@campusconnect.edu', 'scrypt:32768:8:1$53bswvkg8Azu3sS8$6c5f1adfb6f853f8beef4264b5bf4a24123c43b00d854eb05777b83b5cc9815c52dfcb4b94cae06a91cb0fce77ac8fb9d913098e1f1176c996ac2ea80bd697f6', 'STUDENT', 'DRIVER'),
+(5, 'Kavita', 'Rao', '9844455566', 'driver2@campusconnect.edu', 'scrypt:32768:8:1$53bswvkg8Azu3sS8$6c5f1adfb6f853f8beef4264b5bf4a24123c43b00d854eb05777b83b5cc9815c52dfcb4b94cae06a91cb0fce77ac8fb9d913098e1f1176c996ac2ea80bd697f6', 'STUDENT', 'DRIVER')
 ON DUPLICATE KEY UPDATE student_id=student_id;
 
 -- 2. Seed Drivers

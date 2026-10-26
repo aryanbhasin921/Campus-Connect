@@ -1,7 +1,7 @@
-# CampusCommute: Student Mobility & Ride-Sharing System
+# CampusConnect: Student Mobility & Ride-Sharing System
 **DBMS Course Project & Full-Stack Web Application**
 
-CampusCommute is a three-tier web application built strictly following the *CampusCommute Complete Project Blueprint*. It allows campus students to discover rides along matching routes, book seats, share commute costs, and publish rides as registered student-drivers, with strict ACID transactions, relational integrity constraints, triggers, and comprehensive views.
+CampusConnect is a three-tier web application built strictly following the *Student Mobility & Ride-Sharing System Blueprint*. It allows campus students to discover rides along matching routes, book seats, share commute costs, and publish rides as registered student-drivers, with strict ACID transactions, relational integrity constraints, triggers, and comprehensive views.
 
 ---
 
@@ -11,11 +11,11 @@ The project includes pre-configured, pre-seeded accounts for demonstrating multi
 
 | Role | Name | Email | Password | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
-| **System Admin** | Admin User | `admin@campuscommute.edu` | `admin123` | **Pre-decided Admin**: Add campus nodes/locations, view all 10 DBMS tables, inspect views, run SQL queries & reports |
-| **Student (Passenger 1)** | Rahul Sharma | `passenger@campuscommute.edu` | `password123` | Find & book rides, view personal bookings, cancel bookings |
-| **Student (Passenger 2)** | Riya Patel | `riya@campuscommute.edu` | `password123` | Second student to demonstrate real-time cross-account seat reflections |
-| **Driver (Student)** | Arjun Verma | `driver@campuscommute.edu` | `password123` | Registered student-driver with vehicle (Honda City `DL-01-AB-1234`), publishes rides with ordered stops & fares, views ride manifest |
-| **Driver 2 (Student)** | Kavita Rao | `driver2@campuscommute.edu` | `password123` | Second registered driver with Swift `DL-04-CD-5678` |
+| **System Admin** | Admin User | `admin@campusconnect.edu` | `admin123` | **Pre-decided Admin**: Add campus nodes/locations, view all 10 DBMS tables, inspect views, run SQL queries & reports |
+| **Student (Passenger 1)** | Rahul Sharma | `passenger@campusconnect.edu` | `password123` | Find & book rides, view personal bookings, cancel bookings |
+| **Student (Passenger 2)** | Riya Patel | `riya@campusconnect.edu` | `password123` | Second student to demonstrate real-time cross-account seat reflections |
+| **Driver (Student)** | Arjun Verma | `driver@campusconnect.edu` | `password123` | Registered student-driver with vehicle (Honda City `DL-01-AB-1234`), publishes rides with ordered stops & fares, views ride manifest |
+| **Driver 2 (Student)** | Kavita Rao | `driver2@campusconnect.edu` | `password123` | Second registered driver with Swift `DL-04-CD-5678` |
 
 *(Note: In the login page, you can use the **1-Click Quick Demo Autofill** buttons to instantly fill credentials for any of these accounts!)*
 
@@ -46,10 +46,10 @@ Open your browser and navigate to: **`http://localhost:5050`**
 The database starts clean with **0 published rides and 0 bookings**, but with all accounts, driver vehicles, and campus locations pre-configured so you can publish live:
 
 1. **Step 1 — Show Student View (Initially Empty)**:
-   - Log in as Passenger (`passenger@campuscommute.edu` / `password123` or `riya@campuscommute.edu`).
+   - Log in as Passenger (`passenger@campusconnect.edu` / `password123` or `riya@campusconnect.edu`).
    - Notice that the **Available Rides** section shows *"No matching rides available at this time"* because no driver has published yet.
 2. **Step 2 — Driver Publishes a Route Live**:
-   - In another browser tab/window, log in as Driver (`driver@campuscommute.edu` / `password123`).
+   - In another browser tab/window, log in as Driver (`driver@campusconnect.edu` / `password123`).
    - In the **Publish a New Ride** form:
      - Vehicle: *Honda City (DL-01-AB-1234)*
      - Set departure time & fare (e.g., ₹50).
@@ -66,7 +66,7 @@ The database starts clean with **0 published rides and 0 bookings**, but with al
    - In the Driver View, the passenger appears in the **Booked Passenger Manifest**.
    - Click **"End / Complete Ride"** to conclude the trip.
 5. **Step 5 — Admin View Demonstration**:
-   - Log in as Admin (`admin@campuscommute.edu` / `admin123`).
+   - Log in as Admin (`admin@campusconnect.edu` / `admin123`).
    - Show all 10 live DBMS tables, views, and analytical reports.
 
 ---

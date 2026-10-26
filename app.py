@@ -44,7 +44,7 @@ app = create_app()
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5050))
     print(f"==================================================")
-    print(f"CampusCommute Server starting on http://localhost:{port}")
+    print(f"CampusConnect Server starting on http://localhost:{port}")
     print(f"Pre-decided Admin: {Config.ADMIN_EMAIL} | Password: {Config.ADMIN_PASSWORD}")
     print(f"==================================================")
     app.run(debug=True, host='0.0.0.0', port=port)

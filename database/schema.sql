@@ -1,11 +1,11 @@
 -- ========================================================
--- CampusCommute Database Schema (MySQL 8.x / InnoDB)
+-- CampusConnect Database Schema (MySQL 8.x / InnoDB)
 -- Student Mobility & Ride-Sharing System
 -- Enforces: PK/FK, UNIQUE, CHECK, NOT NULL constraints
 -- ========================================================
 
-CREATE DATABASE IF NOT EXISTS campuscommute;
-USE campuscommute;
+CREATE DATABASE IF NOT EXISTS campusconnect;
+USE campusconnect;
 
 -- 1. Students Table
 CREATE TABLE IF NOT EXISTS students (

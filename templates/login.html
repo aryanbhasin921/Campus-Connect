@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Login - CampusCommute{% endblock %}
+{% block title %}Login - CampusConnect{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center py-4">
@@ -7,7 +7,7 @@
         <div class="card shadow-lg border-0 rounded-4">
             <div class="card-header bg-dark text-white p-4 text-center rounded-top-4">
                 <div class="display-6 text-warning mb-2"><i class="bi bi-car-front"></i></div>
-                <h4 class="fw-bold mb-1">CampusCommute Login</h4>
+                <h4 class="fw-bold mb-1">CampusConnect Login</h4>
                 <p class="text-white-50 small mb-0">Sign in as Passenger, Driver, or Admin</p>
             </div>
             
@@ -20,22 +20,22 @@
                     </div>
                     <div class="row g-2">
                         <div class="col-6">
-                            <button type="button" class="btn btn-sm btn-outline-primary w-100 text-truncate" onclick="fillLogin('passenger@campuscommute.edu', 'password123')">
+                            <button type="button" class="btn btn-sm btn-outline-primary w-100 text-truncate" onclick="fillLogin('passenger@campusconnect.edu', 'password123')">
                                 <i class="bi bi-person me-1"></i> Student 1 (Rahul)
                             </button>
                         </div>
                         <div class="col-6">
-                            <button type="button" class="btn btn-sm btn-outline-info w-100 text-truncate" onclick="fillLogin('riya@campuscommute.edu', 'password123')">
+                            <button type="button" class="btn btn-sm btn-outline-info w-100 text-truncate" onclick="fillLogin('riya@campusconnect.edu', 'password123')">
                                 <i class="bi bi-person me-1"></i> Student 2 (Riya)
                             </button>
                         </div>
                         <div class="col-6">
-                            <button type="button" class="btn btn-sm btn-outline-success w-100 text-truncate" onclick="fillLogin('driver@campuscommute.edu', 'password123')">
+                            <button type="button" class="btn btn-sm btn-outline-success w-100 text-truncate" onclick="fillLogin('driver@campusconnect.edu', 'password123')">
                                 <i class="bi bi-steering-wheel me-1"></i> Driver (Arjun)
                             </button>
                         </div>
                         <div class="col-6">
-                            <button type="button" class="btn btn-sm btn-outline-danger w-100 text-truncate" onclick="fillLogin('admin@campuscommute.edu', 'admin123')">
+                            <button type="button" class="btn btn-sm btn-outline-danger w-100 text-truncate" onclick="fillLogin('admin@campusconnect.edu', 'admin123')">
                                 <i class="bi bi-shield-lock me-1"></i> Admin (Pre-decided)
                             </button>
                         </div>
@@ -47,7 +47,7 @@
                         <label class="form-label fw-semibold" for="email">Campus Email Address</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                            <input type="email" class="form-control" id="email" name="email" value="{{ email or '' }}" placeholder="student@campuscommute.edu" required>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ email or '' }}" placeholder="student@campusconnect.edu" required>
                         </div>
                     </div>
 
