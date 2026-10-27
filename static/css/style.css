@@ -1,37 +1,490 @@
-/* CampusConnect Custom Styling */
+/* ==========================================================================
+   CampusConnect - Modern, Clean & Rounded Minimalist Design System
+   ========================================================================== */
+
 :root {
-    --primary-color: #0d6efd;
-    --success-color: #198754;
-    --dark-bg: #212529;
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --primary-light: #eff6ff;
+    --success: #10b981;
+    --success-light: #ecfdf5;
+    --warning: #f59e0b;
+    --warning-light: #fffbeb;
+    --danger: #ef4444;
+    --danger-light: #fef2f2;
+    --info: #06b6d4;
+    --info-light: #ecfeff;
+    --slate-50: #f8fafc;
+    --slate-100: #f1f5f9;
+    --slate-200: #e2e8f0;
+    --slate-300: #cbd5e1;
+    --slate-600: #475569;
+    --slate-700: #334155;
+    --slate-800: #1e293b;
+    --slate-900: #0f172a;
+
+    --bs-font-sans-serif: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --bs-body-font-family: var(--bs-font-sans-serif);
+    --bs-body-bg: #f8fafc;
+    --bs-body-color: #334155;
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    color: #333333;
+    font-family: var(--bs-body-font-family);
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
 }
 
-.fs-7 {
-    font-size: 0.9rem;
+/* --------------------------------------------------------------------------
+   Rounded Minimalist Cards
+   -------------------------------------------------------------------------- */
+.card {
+    border-radius: 20px !important;
+    border: 1px solid var(--slate-200) !important;
+    background-color: #ffffff;
+    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04) !important;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.fs-8 {
+.card-header {
+    background-color: #ffffff !important;
+    color: var(--slate-800) !important;
+    border-bottom: 1px solid var(--slate-100) !important;
+    padding: 1.15rem 1.4rem !important;
+    border-top-left-radius: 20px !important;
+    border-top-right-radius: 20px !important;
+}
+
+/* Soften any legacy bg-dark card headers */
+.card-header.bg-dark {
+    background-color: #ffffff !important;
+    color: var(--slate-900) !important;
+}
+
+.card-header.bg-dark h4, 
+.card-header.bg-dark h5, 
+.card-header.bg-dark span {
+    color: var(--slate-900) !important;
+}
+
+.card-header.bg-dark .text-white-50 {
+    color: var(--slate-600) !important;
+}
+
+.card-footer {
+    background-color: #ffffff !important;
+    border-top: 1px solid var(--slate-100) !important;
+    border-bottom-left-radius: 20px !important;
+    border-bottom-right-radius: 20px !important;
+    padding: 1rem 1.4rem !important;
+}
+
+/* --------------------------------------------------------------------------
+   Rounded Buttons & Interactive Elements
+   -------------------------------------------------------------------------- */
+.btn {
+    border-radius: 9999px !important; /* Soft Pill Shape */
+    padding: 0.52rem 1.25rem;
+    font-weight: 500;
+    font-size: 0.88rem;
+    letter-spacing: 0.01em;
+    border: 1.5px solid transparent;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn-sm {
+    border-radius: 9999px !important;
+    padding: 0.35rem 0.85rem !important;
+    font-size: 0.8rem !important;
+}
+
+.btn-lg {
+    border-radius: 9999px !important;
+    padding: 0.75rem 1.75rem !important;
+    font-size: 1rem !important;
+}
+
+.btn-primary {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: #ffffff !important;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover) !important;
+    border-color: var(--primary-hover) !important;
+}
+
+.btn-outline-primary {
+    border-color: var(--slate-300) !important;
+    color: var(--primary) !important;
+    background-color: transparent !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-light) !important;
+    border-color: var(--primary) !important;
+    color: var(--primary) !important;
+}
+
+.btn-outline-secondary {
+    border-color: var(--slate-300) !important;
+    color: var(--slate-700) !important;
+    background-color: #ffffff !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--slate-100) !important;
+    color: var(--slate-900) !important;
+}
+
+.btn-outline-success {
+    border-color: #a7f3d0 !important;
+    color: #059669 !important;
+}
+
+.btn-outline-success:hover {
+    background-color: var(--success-light) !important;
+    color: #047857 !important;
+}
+
+.btn-outline-danger {
+    border-color: #fecaca !important;
+    color: #dc2626 !important;
+}
+
+.btn-outline-danger:hover {
+    background-color: var(--danger-light) !important;
+    color: #b91c1c !important;
+}
+
+.btn-outline-warning {
+    border-color: #fde68a !important;
+    color: #d97706 !important;
+}
+
+.btn-outline-info {
+    border-color: #bae6fd !important;
+    color: #0284c7 !important;
+}
+
+/* --------------------------------------------------------------------------
+   Rounded Form Inputs & Selects
+   -------------------------------------------------------------------------- */
+.form-control,
+.form-select {
+    border-radius: 14px !important;
+    border: 1.5px solid var(--slate-200) !important;
+    padding: 0.6rem 1rem !important;
+    font-size: 0.9rem !important;
+    background-color: #ffffff !important;
+    color: var(--slate-800) !important;
+    box-shadow: none !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12) !important;
+}
+
+.form-control-sm,
+.form-select-sm {
+    border-radius: 12px !important;
+    padding: 0.4rem 0.8rem !important;
+    font-size: 0.825rem !important;
+}
+
+.input-group {
+    border-radius: 14px !important;
+}
+
+.input-group > :first-child:not(:last-child) {
+    border-top-left-radius: 14px !important;
+    border-bottom-left-radius: 14px !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+.input-group > :last-child:not(:first-child) {
+    border-top-right-radius: 14px !important;
+    border-bottom-right-radius: 14px !important;
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+}
+
+.input-group-text {
+    border-radius: 14px 0 0 14px !important;
+    background-color: var(--slate-50) !important;
+    border: 1.5px solid var(--slate-200) !important;
+    border-right: none !important;
+    color: var(--slate-600) !important;
+    padding: 0.6rem 0.95rem !important;
+}
+
+/* --------------------------------------------------------------------------
+   Rounded Soft Badges
+   -------------------------------------------------------------------------- */
+.badge {
+    border-radius: 9999px !important; /* Fully pill-shaped */
+    font-weight: 500 !important;
+    font-size: 0.76rem !important;
+    padding: 0.35rem 0.75rem !important;
+    letter-spacing: 0.01em;
+}
+
+.badge.bg-primary {
+    background-color: var(--primary-light) !important;
+    color: var(--primary) !important;
+    border: 1px solid #bfdbfe;
+}
+
+.badge.bg-success {
+    background-color: var(--success-light) !important;
+    color: #059669 !important;
+    border: 1px solid #a7f3d0;
+}
+
+.badge.bg-warning {
+    background-color: var(--warning-light) !important;
+    color: #d97706 !important;
+    border: 1px solid #fde68a;
+}
+
+.badge.bg-danger {
+    background-color: var(--danger-light) !important;
+    color: #dc2626 !important;
+    border: 1px solid #fecaca;
+}
+
+.badge.bg-info {
+    background-color: var(--info-light) !important;
+    color: #0891b2 !important;
+    border: 1px solid #a5f3fc;
+}
+
+.badge.bg-secondary {
+    background-color: var(--slate-100) !important;
+    color: var(--slate-700) !important;
+    border: 1px solid var(--slate-200);
+}
+
+.badge.bg-dark {
+    background-color: var(--slate-800) !important;
+    color: #ffffff !important;
+}
+
+/* --------------------------------------------------------------------------
+   Rounded Alerts
+   -------------------------------------------------------------------------- */
+.alert {
+    border-radius: 16px !important;
+    border: 1px solid transparent !important;
+    padding: 0.9rem 1.25rem !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+}
+
+.alert-success {
+    background-color: var(--success-light) !important;
+    color: #065f46 !important;
+    border-color: #a7f3d0 !important;
+}
+
+.alert-danger {
+    background-color: var(--danger-light) !important;
+    color: #991b1b !important;
+    border-color: #fecaca !important;
+}
+
+.alert-warning {
+    background-color: var(--warning-light) !important;
+    color: #92400e !important;
+    border-color: #fde68a !important;
+}
+
+.alert-info {
+    background-color: var(--info-light) !important;
+    color: #155e75 !important;
+    border-color: #a5f3fc !important;
+}
+
+.alert-secondary,
+.alert-light {
+    background-color: var(--slate-100) !important;
+    color: var(--slate-700) !important;
+    border-color: var(--slate-200) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Sleek Rounded Navigation Bar
+   -------------------------------------------------------------------------- */
+.navbar {
+    background-color: #0f172a !important;
+    padding: 0.75rem 1rem !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.navbar .nav-link {
+    border-radius: 9999px !important;
+    padding: 0.45rem 1rem !important;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.75) !important;
+    transition: all 0.15s ease;
+    margin: 0 0.15rem;
+}
+
+.navbar .nav-link:hover {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.navbar .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+}
+
+/* --------------------------------------------------------------------------
+   Rounded Demo Helper Bar
+   -------------------------------------------------------------------------- */
+.demo-helper-bar {
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--slate-200);
+    padding: 0.45rem 1rem;
     font-size: 0.8rem;
 }
 
-.fs-9 {
-    font-size: 0.72rem;
+.demo-chip {
+    display: inline-flex;
+    align-items: center;
+    background: var(--slate-100);
+    border: 1px solid var(--slate-200);
+    border-radius: 9999px;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.78rem;
+    color: var(--slate-700);
+    margin: 0.15rem 0.25rem;
 }
 
-.shadow-xs {
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+.demo-chip code {
+    background: transparent !important;
+    color: var(--primary) !important;
+    font-weight: 600;
+    padding: 0;
 }
 
+/* --------------------------------------------------------------------------
+   Ride & Action Items (Rounded Cards)
+   -------------------------------------------------------------------------- */
 .hover-shadow {
-    transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    border-radius: 18px !important;
+    border: 1px solid var(--slate-200) !important;
+    background-color: #ffffff;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .hover-shadow:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07) !important;
+    border-color: #cbd5e1 !important;
+}
+
+/* Inner rounded boxes (e.g., ordered stops, vehicle info) */
+.rounded-2,
+.rounded-3,
+.rounded-4 {
+    border-radius: 16px !important;
+}
+
+/* --------------------------------------------------------------------------
+   Rounded Tables & List Groups
+   -------------------------------------------------------------------------- */
+.table-responsive {
+    border-radius: 16px !important;
+    overflow: hidden;
+    border: 1px solid var(--slate-200);
+}
+
+.table {
+    margin-bottom: 0 !important;
+    background-color: #ffffff;
+}
+
+.table thead th {
+    background-color: var(--slate-50) !important;
+    color: var(--slate-700) !important;
+    font-weight: 600;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 1px solid var(--slate-200) !important;
+    padding: 0.75rem 1rem !important;
+}
+
+.table tbody td {
+    padding: 0.8rem 1rem !important;
+    border-bottom: 1px solid var(--slate-100) !important;
+    vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--slate-50) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Rounded Modals & Dropdowns
+   -------------------------------------------------------------------------- */
+.modal-content {
+    border-radius: 24px !important;
+    border: none !important;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+    overflow: hidden;
+}
+
+.dropdown-menu {
+    border-radius: 16px !important;
+    border: 1px solid var(--slate-200) !important;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08) !important;
+    padding: 0.45rem !important;
+}
+
+.dropdown-item {
+    border-radius: 10px !important;
+    padding: 0.45rem 0.85rem !important;
+    font-size: 0.875rem !important;
+    color: var(--slate-700) !important;
+    transition: background 0.15s ease;
+}
+
+.dropdown-item:hover {
+    background-color: var(--slate-100) !important;
+    color: var(--slate-900) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Code & Helpers
+   -------------------------------------------------------------------------- */
+code {
+    background-color: var(--slate-100) !important;
+    color: var(--slate-800) !important;
+    border-radius: 8px !important;
+    padding: 0.15rem 0.45rem !important;
+    font-size: 0.85em;
 }
 
 .spin-icon {
@@ -44,8 +497,6 @@ body {
     to { transform: rotate(360deg); }
 }
 
-.btn-xs {
-    padding: 0.18rem 0.45rem;
-    font-size: 0.75rem;
-    border-radius: 0.25rem;
-}
+.fs-7 { font-size: 0.88rem; }
+.fs-8 { font-size: 0.8rem; }
+.fs-9 { font-size: 0.72rem; }
