@@ -85,3 +85,31 @@ SELECT
     (ar.total_capacity - ar.remaining_capacity) AS seats_booked,
     ROUND(((ar.total_capacity - ar.remaining_capacity) * 100.0 / ar.total_capacity), 1) AS utilisation_percentage
 FROM available_rides ar;
+
+-- 8. Driver Leaderboard by Average Rating
+SELECT
+    d.student_id AS driver_id,
+    CONCAT(s.first_name, ' ', s.last_name) AS driver_name,
+    COUNT(r.rating_id) AS total_ratings,
+    ROUND(AVG(r.rating), 2) AS average_rating
+FROM drivers d
+JOIN students s ON s.student_id = d.student_id
+LEFT JOIN driver_ratings r ON r.driver_id = d.student_id
+GROUP BY d.student_id, s.first_name, s.last_name
+ORDER BY average_rating DESC;
+
+-- 9. Customer Feedback with Rating (LEFT JOIN: feedback may exist without a rating)
+SELECT
+    f.feedback_id,
+    f.booking_id,
+    CONCAT(c.first_name, ' ', c.last_name) AS customer_name,
+    CONCAT(ds.first_name, ' ', ds.last_name) AS driver_name,
+    f.category,
+    r.rating,
+    f.comments,
+    f.created_at
+FROM feedback f
+JOIN students c ON c.student_id = f.customer_id
+JOIN students ds ON ds.student_id = f.driver_id
+LEFT JOIN driver_ratings r ON r.booking_id = f.booking_id
+ORDER BY f.created_at DESC;

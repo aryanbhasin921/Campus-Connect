@@ -1,4 +1,6 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+import sqlite3
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
+from config import Config
 from db import query_db, execute_db
 from routes.auth import admin_required
 from database.sqlite_init import init_sqlite_db
@@ -15,12 +17,15 @@ ALL_TABLES = [
     'ride_points',
     'requests',
     'bookings',
-    'payment'
+    'payment',
+    'driver_ratings',
+    'feedback'
 ]
 
 ALL_VIEWS = [
     'confirmed_bookings_view',
-    'published_rides_view'
+    'published_rides_view',
+    'driver_rating_summary_view'
 ]
 
 @admin_bp.route('/admin')
@@ -32,6 +37,9 @@ def admin_dashboard():
         selected_table = 'students'
         
     table_data = query_db(f"SELECT * FROM {selected_table} LIMIT 100")
+    for row in table_data:
+        if 'password_hash' in row:
+            row['password_hash'] = '********'
     columns = list(table_data[0].keys()) if table_data else []
     
     # 2. Count summary across all tables
@@ -58,11 +66,15 @@ def admin_dashboard():
 @admin_bp.route('/admin/reset_demo_data', methods=['POST'])
 @admin_required
 def reset_demo_data():
+    if Config.DB_TYPE != 'sqlite':
+        flash('Demo reset is available only in SQLite mode.', 'danger')
+        return redirect(url_for('admin.admin_dashboard'))
     try:
         init_sqlite_db(force_reset=True)
         flash('All test history, rides, bookings, and payments have been completely removed! Clean presentation state restored (0 rides).', 'success')
-    except Exception as e:
-        flash(f'Error resetting database: {str(e)}', 'danger')
+    except Exception:
+        current_app.logger.exception('Demo reset failed')
+        flash('Could not reset the database. Stop the server, run database/sqlite_init.py and restart.', 'danger')
     return redirect(url_for('admin.admin_dashboard'))
 
 @admin_bp.route('/admin/locations/add', methods=['POST'])
@@ -82,8 +94,9 @@ def add_location():
             (name, latitude, longitude)
         )
         flash(f'Campus node "{name}" added successfully to locations table!', 'success')
-    except Exception as e:
-        flash(f'Failed to add location: {str(e)}', 'danger')
+    except Exception:
+        current_app.logger.exception('Adding location failed')
+        flash('Failed to add location. The name may already exist.', 'danger')
         
     return redirect(url_for('admin.admin_dashboard', table='locations'))
 
@@ -189,8 +202,35 @@ def admin_reports():
         FROM available_rides ar;
     """)
 
+    # Report 8: Driver Leaderboard by Average Rating
+    rep8 = query_db("""
+        SELECT driver_id, driver_name, total_ratings, average_rating
+        FROM driver_rating_summary_view
+        ORDER BY average_rating DESC;
+    """)
+
+    # Report 9: Customer Feedback with Rating
+    rep9 = query_db("""
+        SELECT
+            f.feedback_id,
+            f.booking_id,
+            c.first_name || ' ' || c.last_name AS customer_name,
+            ds.first_name || ' ' || ds.last_name AS driver_name,
+            f.category,
+            r.rating,
+            f.comments,
+            f.created_at
+        FROM feedback f
+        JOIN students c ON c.student_id = f.customer_id
+        JOIN students ds ON ds.student_id = f.driver_id
+        LEFT JOIN driver_ratings r ON r.booking_id = f.booking_id
+        ORDER BY f.created_at DESC;
+    """)
+
     return render_template(
         'admin_reports.html',
+        rep8=rep8,
+        rep9=rep9,
         rep1=rep1,
         rep2=rep2,
         rep3=rep3,
@@ -200,6 +240,27 @@ def admin_reports():
         rep7=rep7
     )
 
+def _run_readonly_query(sql):
+    """
+    Run an admin SQL console query on a read-only SQLite connection.
+    The password_hash column is always returned as NULL.
+    """
+    conn = sqlite3.connect('file:' + Config.SQLITE_DB_PATH + '?mode=ro', uri=True)
+    conn.row_factory = sqlite3.Row
+
+    def authorizer(action, arg1, arg2, dbname, source):
+        if action == sqlite3.SQLITE_READ and arg2 == 'password_hash':
+            return sqlite3.SQLITE_IGNORE
+        return sqlite3.SQLITE_OK
+
+    conn.set_authorizer(authorizer)
+    try:
+        cursor = conn.execute(sql)  # sqlite3 refuses multiple statements in one call
+        return [dict(r) for r in cursor.fetchmany(500)]
+    finally:
+        conn.close()
+
+
 @admin_bp.route('/admin/sql', methods=['GET', 'POST'])
 @admin_required
 def admin_sql():
@@ -207,21 +268,19 @@ def admin_sql():
     results = []
     columns = []
     error = None
-    
+
     if request.method == 'POST':
         sql_query = request.form.get('sql_query', '').strip()
-        # Security sanity check: Allow SELECT/SHOW/EXPLAIN for DBMS presentation
-        if not sql_query.lower().startswith(('select', 'show', 'explain', 'pragma')):
-            error = "For safety in this console, only SELECT / analytical queries are permitted."
+        if not sql_query.lower().startswith(('select', 'explain', 'with')):
+            error = "For safety, this console only allows read-only SELECT / EXPLAIN queries."
+        elif Config.DB_TYPE != 'sqlite':
+            error = "The SQL console is available only in SQLite mode."
         else:
             try:
-                data = query_db(sql_query)
-                if data:
-                    columns = list(data[0].keys())
-                    results = data
-                else:
-                    results = []
+                results = _run_readonly_query(sql_query)
+                columns = list(results[0].keys()) if results else []
             except Exception as e:
+                # Query syntax errors are useful to show in a SQL console; nothing is writable here
                 error = str(e)
 
     return render_template(

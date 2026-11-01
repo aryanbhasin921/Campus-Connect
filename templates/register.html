@@ -15,6 +15,7 @@
             
             <div class="card-body px-4 pb-4 pt-1">
                 <form action="{{ url_for('auth.register') }}" method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold text-secondary" for="first_name">First Name</label>

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
 from werkzeug.security import check_password_hash, generate_password_hash
 from functools import wraps
 from db import query_db, execute_db
@@ -77,6 +77,22 @@ def register():
             flash('All fields are required.', 'danger')
             return render_template('register.html')
 
+        if len(first_name) > 50 or len(last_name) > 50:
+            flash('Names must not exceed 50 characters.', 'danger')
+            return render_template('register.html')
+
+        if len(email) > 100 or '@' not in email or '.' not in email.split('@')[-1]:
+            flash('Please enter a valid email address.', 'danger')
+            return render_template('register.html')
+
+        if not phone_number.isdigit() or not 10 <= len(phone_number) <= 15:
+            flash('Enter a valid phone number using 10-15 digits.', 'danger')
+            return render_template('register.html')
+
+        if len(password) < 8:
+            flash('Password must be at least 8 characters long.', 'danger')
+            return render_template('register.html')
+
         # Check uniqueness
         existing = query_db("SELECT * FROM students WHERE email = ? OR phone_number = ?", (email, phone_number), one=True)
         if existing:
@@ -94,13 +110,15 @@ def register():
             )
             flash('Registration successful! You can now log in with your credentials.', 'success')
             return redirect(url_for('auth.login'))
-        except Exception as e:
-            flash(f'Database error during registration: {str(e)}', 'danger')
+        except Exception:
+            current_app.logger.exception('Registration failed')
+            flash('Registration failed. Please check your details and try again.', 'danger')
             return render_template('register.html')
 
     return render_template('register.html')
 
-@auth_bp.route('/logout')
+@auth_bp.route('/logout', methods=['POST'])
+@login_required
 def logout():
     session.clear()
     flash('You have been logged out safely.', 'info')

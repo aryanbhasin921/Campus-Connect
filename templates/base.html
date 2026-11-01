@@ -66,12 +66,14 @@
                         {% if session.get('is_driver') %}
                             {% if session.get('current_mode') == 'DRIVER' %}
                                 <form action="{{ url_for('auth.switch_mode', mode='PASSENGER') }}" method="POST" class="d-inline">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-outline-warning">
                                         <i class="bi bi-arrow-left-right me-1"></i> Mode: Driver (Switch to Passenger)
                                     </button>
                                 </form>
                             {% else %}
                                 <form action="{{ url_for('auth.switch_mode', mode='DRIVER') }}" method="POST" class="d-inline">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-outline-info">
                                         <i class="bi bi-arrow-left-right me-1"></i> Mode: Passenger (Switch to Driver)
                                     </button>
@@ -89,9 +91,12 @@
                         <div class="fs-8 text-light">{{ session.get('email') }}</div>
                     </div>
 
-                    <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline-danger">
-                        <i class="bi bi-box-arrow-right"></i> Logout
-                    </a>
+                    <form action="{{ url_for('auth.logout') }}" method="POST" class="d-inline">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </button>
+                    </form>
                 </div>
 
                 {% else %}

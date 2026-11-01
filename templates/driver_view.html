@@ -34,6 +34,7 @@
 
             <div class="card-body p-4">
                 <form action="{{ url_for('driver.register_driver') }}" method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <h6 class="fw-bold text-primary mb-3"><i class="bi bi-card-heading me-1"></i> 1. Licence Details</h6>
                     <div class="row g-3 mb-4">
                         <div class="col-md-4">
@@ -118,6 +119,7 @@
             <div class="card card-body border-0 shadow-sm">
                 <h6 class="fw-bold mb-3"><i class="bi bi-car-front me-1"></i> Register New Vehicle</h6>
                 <form action="{{ url_for('driver.add_vehicle') }}" method="POST" class="row g-3">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">Plate Number</label>
                         <input type="text" class="form-control form-control-sm" name="vehicle_number" placeholder="DL-04-CD-5678" required>
@@ -146,6 +148,39 @@
         </div>
     </div>
 
+    <!-- RATINGS & FEEDBACK RECEIVED -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0"><i class="bi bi-star-fill text-warning me-2"></i> My Ratings &amp; Feedback</h5>
+                <span class="badge bg-warning text-dark">
+                    {% if rating_summary.average %}{{ rating_summary.average }} / 5 · {{ rating_summary.total }} rating{{ '' if rating_summary.total == 1 else 's' }}{% else %}No ratings yet{% endif %}
+                </span>
+            </div>
+            <div class="card-body p-3">
+                {% if recent_reviews %}
+                <div class="d-flex flex-column gap-2">
+                    {% for rv in recent_reviews %}
+                    <div class="border rounded-3 p-2 small">
+                        <div class="d-flex justify-content-between">
+                            <span class="fw-semibold">{{ rv.first_name }} {{ rv.last_name }} <span class="text-muted">· Booking #{{ rv.booking_id }}</span></span>
+                            {% if rv.rating %}
+                            <span class="text-warning">{% for i in range(1, 6) %}<i class="bi {{ 'bi-star-fill' if i <= rv.rating else 'bi-star' }}"></i>{% endfor %}</span>
+                            {% endif %}
+                        </div>
+                        {% if rv.comments %}
+                        <div class="text-muted mt-1"><span class="badge bg-light text-dark border">{{ rv.category }}</span> {{ rv.comments }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-muted small text-center py-2">Passengers can rate you after a ride is completed.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
     <!-- PUBLISH A RIDE CARD -->
     <div class="col-lg-5">
         <div class="card border-0 shadow-sm rounded-4">
@@ -157,6 +192,7 @@
 
             <div class="card-body p-4">
                 <form action="{{ url_for('driver.publish_ride') }}" method="POST" id="publishRideForm">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <!-- Vehicle Selection -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold" for="pub_vehicle">Select Vehicle</label>
@@ -272,6 +308,7 @@
                                 </div>
                                 {% if r.status == 'PUBLISHED' %}
                                 <form action="{{ url_for('driver.complete_ride', ride_id=r.ride_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Complete this ride? All confirmed passenger bookings will be finalized as COMPLETED.');">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-outline-success py-1 px-2 fw-semibold">
                                         <i class="bi bi-flag-fill me-1"></i> End / Complete Ride
                                     </button>

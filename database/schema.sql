@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS available_rides (
     status VARCHAR(20) NOT NULL DEFAULT 'PUBLISHED',
     FOREIGN KEY (driver_id) REFERENCES drivers(student_id),
     FOREIGN KEY (vehicle_number) REFERENCES vehicle(vehicle_number),
+    CONSTRAINT chk_total_capacity CHECK (total_capacity > 0),
     CONSTRAINT chk_capacity_bounds CHECK (remaining_capacity >= 0 AND remaining_capacity <= total_capacity),
     CONSTRAINT chk_fare_positive CHECK (fare_per_passenger >= 0)
 ) ENGINE=InnoDB;
@@ -93,7 +94,8 @@ CREATE TABLE IF NOT EXISTS requests (
     status VARCHAR(20) NOT NULL DEFAULT 'CONFIRMED',
     FOREIGN KEY (customer_id) REFERENCES students(student_id),
     FOREIGN KEY (pickup_location_id) REFERENCES locations(location_id),
-    FOREIGN KEY (drop_location_id) REFERENCES locations(location_id)
+    FOREIGN KEY (drop_location_id) REFERENCES locations(location_id),
+    CONSTRAINT chk_request_locations CHECK (pickup_location_id <> drop_location_id)
 ) ENGINE=InnoDB;
 
 -- 9. Bookings Table
@@ -112,13 +114,14 @@ CREATE TABLE IF NOT EXISTS bookings (
     FOREIGN KEY (ride_id) REFERENCES available_rides(ride_id),
     FOREIGN KEY (pickup_location_id) REFERENCES locations(location_id),
     FOREIGN KEY (drop_location_id) REFERENCES locations(location_id),
-    CONSTRAINT chk_booking_fare CHECK (fare >= 0)
+    CONSTRAINT chk_booking_fare CHECK (fare >= 0),
+    CONSTRAINT chk_booking_locations CHECK (pickup_location_id <> drop_location_id)
 ) ENGINE=InnoDB;
 
 -- 10. Payment Table
 CREATE TABLE IF NOT EXISTS payment (
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
-    booking_id INT NOT NULL,
+    booking_id INT NOT NULL UNIQUE,
     payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     amount DECIMAL(10,2) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'PAID',
@@ -127,8 +130,40 @@ CREATE TABLE IF NOT EXISTS payment (
     CONSTRAINT chk_payment_amount CHECK (amount >= 0)
 ) ENGINE=InnoDB;
 
+-- 11. Driver Ratings Table (one 1-5 star rating per completed booking)
+CREATE TABLE IF NOT EXISTS driver_ratings (
+    rating_id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_id INT NOT NULL UNIQUE,
+    driver_id INT NOT NULL,
+    customer_id INT NOT NULL,
+    rating TINYINT NOT NULL,
+    rated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (booking_id) REFERENCES bookings(booking_id),
+    FOREIGN KEY (driver_id) REFERENCES drivers(student_id),
+    FOREIGN KEY (customer_id) REFERENCES students(student_id),
+    CONSTRAINT chk_rating_range CHECK (rating BETWEEN 1 AND 5)
+) ENGINE=InnoDB;
+
+-- 12. Feedback Table (written feedback by a customer about a completed booking)
+CREATE TABLE IF NOT EXISTS feedback (
+    feedback_id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_id INT NOT NULL UNIQUE,
+    driver_id INT NOT NULL,
+    customer_id INT NOT NULL,
+    category VARCHAR(20) NOT NULL DEFAULT 'GENERAL',
+    comments TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (booking_id) REFERENCES bookings(booking_id),
+    FOREIGN KEY (driver_id) REFERENCES drivers(student_id),
+    FOREIGN KEY (customer_id) REFERENCES students(student_id),
+    CONSTRAINT chk_feedback_category CHECK (category IN ('GENERAL','PUNCTUALITY','SAFETY','VEHICLE','BEHAVIOUR','PAYMENT')),
+    CONSTRAINT chk_feedback_comments CHECK (CHAR_LENGTH(TRIM(comments)) > 0)
+) ENGINE=InnoDB;
+
 -- Indexes for performance
 CREATE INDEX idx_rides_driver ON available_rides(driver_id);
 CREATE INDEX idx_rides_departure ON available_rides(departure_time);
 CREATE INDEX idx_bookings_customer ON bookings(customer_id);
 CREATE INDEX idx_bookings_ride ON bookings(ride_id);
+CREATE INDEX idx_ratings_driver ON driver_ratings(driver_id);
+CREATE INDEX idx_feedback_driver ON feedback(driver_id);

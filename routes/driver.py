@@ -1,9 +1,47 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
 from datetime import datetime, date
 from db import query_db, execute_db, get_db_transaction
 from routes.auth import login_required
 
 driver_bp = Blueprint('driver', __name__)
+
+class ValidationError(Exception):
+    """Raised inside a transaction to roll it back and show a friendly message."""
+
+
+def _validate_vehicle_fields(vehicle_number, vehicle_name, vehicle_type, vehicle_colour, year, capacity):
+    """Return an error message, or None when the vehicle inputs are valid."""
+    if not (vehicle_number and vehicle_name and vehicle_type and capacity):
+        return 'Please fill all required vehicle fields.'
+    if len(vehicle_number) > 20 or len(vehicle_name) > 60 or len(vehicle_type) > 30 or len(vehicle_colour) > 30:
+        return 'One of the vehicle fields is too long.'
+    if year is None or not 1950 <= year <= date.today().year:
+        return 'Please enter a valid vehicle manufacture year.'
+    if not 1 <= capacity <= 100:
+        return 'Vehicle capacity must be between 1 and 100.'
+    return None
+
+
+def _link_vehicle(cursor, user_id, vehicle_number, vehicle_name, vehicle_type, vehicle_colour, year, capacity):
+    """
+    Register a vehicle for a driver. A vehicle already linked to a different driver is
+    rejected, and existing vehicle details are never silently overwritten.
+    """
+    cursor.execute("SELECT 1 FROM vehicle WHERE vehicle_number = ?", (vehicle_number,))
+    if cursor.fetchone():
+        cursor.execute("SELECT student_id FROM driver_vehicle WHERE vehicle_number = ?", (vehicle_number,))
+        owners = [r[0] for r in cursor.fetchall()]
+        if any(o != user_id for o in owners):
+            raise ValidationError('This vehicle is already registered to another driver.')
+    else:
+        cursor.execute("""
+            INSERT INTO vehicle (vehicle_number, type, name, colour, year_of_manufacture, capacity)
+            VALUES (?, ?, ?, ?, ?, ?);
+        """, (vehicle_number, vehicle_type, vehicle_name, vehicle_colour, year, capacity))
+    cursor.execute("SELECT 1 FROM driver_vehicle WHERE student_id = ? AND vehicle_number = ?", (user_id, vehicle_number))
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO driver_vehicle (student_id, vehicle_number) VALUES (?, ?);", (user_id, vehicle_number))
+
 
 @driver_bp.route('/driver')
 @login_required
@@ -81,8 +119,34 @@ def driver_dashboard():
             r['passengers'] = passengers
             my_rides.append(r)
             
+    # 5. This driver's ratings & customer feedback
+    rating_summary = {'total': 0, 'average': None}
+    recent_reviews = []
+    if driver_info:
+        rating_summary_row = query_db("""
+            SELECT COUNT(*) AS total, ROUND(AVG(rating), 2) AS average
+            FROM driver_ratings WHERE driver_id = ?
+        """, (user_id,), one=True)
+        if rating_summary_row:
+            rating_summary = rating_summary_row
+        recent_reviews = query_db("""
+            SELECT b.booking_id, s.first_name, s.last_name,
+                   r.rating, f.category, f.comments,
+                   COALESCE(f.created_at, r.rated_at) AS reviewed_at
+            FROM bookings b
+            JOIN available_rides ar ON ar.ride_id = b.ride_id
+            JOIN students s ON s.student_id = b.customer_id
+            LEFT JOIN driver_ratings r ON r.booking_id = b.booking_id
+            LEFT JOIN feedback f ON f.booking_id = b.booking_id
+            WHERE ar.driver_id = ? AND (r.rating_id IS NOT NULL OR f.feedback_id IS NOT NULL)
+            ORDER BY reviewed_at DESC
+            LIMIT 10
+        """, (user_id,))
+
     return render_template(
         'driver_view.html',
+        rating_summary=rating_summary,
+        recent_reviews=recent_reviews,
         driver_info=driver_info,
         vehicles=vehicles,
         locations=locations,
@@ -106,47 +170,49 @@ def register_driver():
     year = request.form.get('year_of_manufacture', type=int)
     capacity = request.form.get('capacity', type=int)
     
-    if not (licence_id and licence_expiry_date and vehicle_number and vehicle_name and vehicle_type and capacity):
+    if not (licence_id and licence_expiry_date):
         flash('All driver and vehicle registration fields are required.', 'danger')
         return redirect(url_for('driver.driver_dashboard'))
-        
+    try:
+        datetime.strptime(licence_expiry_date, '%Y-%m-%d')
+    except ValueError:
+        flash('Please enter a valid licence expiry date.', 'danger')
+        return redirect(url_for('driver.driver_dashboard'))
+    if len(licence_id) > 50 or len(upi_id) > 100:
+        flash('Licence ID or UPI ID is too long.', 'danger')
+        return redirect(url_for('driver.driver_dashboard'))
+    error = _validate_vehicle_fields(vehicle_number, vehicle_name, vehicle_type, vehicle_colour, year, capacity)
+    if error:
+        flash(error, 'danger')
+        return redirect(url_for('driver.driver_dashboard'))
+
     try:
         with get_db_transaction() as (cursor, db_type):
+            cursor.execute("SELECT 1 FROM drivers WHERE student_id = ? OR licence_id = ?", (user_id, licence_id))
+            if cursor.fetchone():
+                raise ValidationError('You are already registered as a driver, or this licence ID is already in use.')
+
             # 1. Insert Driver
             cursor.execute("""
                 INSERT INTO drivers (student_id, licence_id, licence_expiry_date, upi_id)
                 VALUES (?, ?, ?, ?);
             """, (user_id, licence_id, licence_expiry_date, upi_id))
-            
-            # 2. Insert Vehicle
-            cursor.execute("""
-                INSERT OR IGNORE INTO vehicle (vehicle_number, type, name, colour, year_of_manufacture, capacity)
-                VALUES (?, ?, ?, ?, ?, ?);
-            """ if db_type == 'sqlite' else """
-                INSERT INTO vehicle (vehicle_number, type, name, colour, year_of_manufacture, capacity)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE name=VALUES(name);
-            """, (vehicle_number, vehicle_type, vehicle_name, vehicle_colour, year, capacity))
-            
-            # 3. Associate Driver with Vehicle
-            cursor.execute("""
-                INSERT OR IGNORE INTO driver_vehicle (student_id, vehicle_number)
-                VALUES (?, ?);
-            """ if db_type == 'sqlite' else """
-                INSERT INTO driver_vehicle (student_id, vehicle_number)
-                VALUES (%s, %s)
-                ON DUPLICATE KEY UPDATE student_id=student_id;
-            """, (user_id, vehicle_number))
-            
+
+            # 2 & 3. Insert vehicle (if new) and associate it with this driver
+            _link_vehicle(cursor, user_id, vehicle_number, vehicle_name, vehicle_type, vehicle_colour, year, capacity)
+
             # Update student current_mode
             cursor.execute("UPDATE students SET current_mode = 'DRIVER' WHERE student_id = ?", (user_id,))
-            
+
         session['is_driver'] = True
         session['current_mode'] = 'DRIVER'
         flash('Congratulations! You are now registered as a Campus Driver and your vehicle is linked.', 'success')
-    except Exception as e:
-        flash(f'Driver registration failed: {str(e)}', 'danger')
-        
+    except ValidationError as e:
+        flash(str(e), 'danger')
+    except Exception:
+        current_app.logger.exception('Driver registration failed')
+        flash('Driver registration failed. Please check your details and try again.', 'danger')
+
     return redirect(url_for('driver.driver_dashboard'))
 
 @driver_bp.route('/vehicles/add', methods=['POST'])
@@ -160,34 +226,25 @@ def add_vehicle():
     year = request.form.get('year_of_manufacture', type=int)
     capacity = request.form.get('capacity', type=int)
     
-    if not (vehicle_number and vehicle_name and vehicle_type and capacity):
-        flash('Please fill all required vehicle fields.', 'danger')
+    error = _validate_vehicle_fields(vehicle_number, vehicle_name, vehicle_type, vehicle_colour, year, capacity)
+    if error:
+        flash(error, 'danger')
         return redirect(url_for('driver.driver_dashboard'))
-        
+
     try:
         with get_db_transaction() as (cursor, db_type):
-            cursor.execute("""
-                INSERT OR IGNORE INTO vehicle (vehicle_number, type, name, colour, year_of_manufacture, capacity)
-                VALUES (?, ?, ?, ?, ?, ?);
-            """ if db_type == 'sqlite' else """
-                INSERT INTO vehicle (vehicle_number, type, name, colour, year_of_manufacture, capacity)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE name=VALUES(name);
-            """, (vehicle_number, vehicle_type, vehicle_name, vehicle_colour, year, capacity))
-            
-            cursor.execute("""
-                INSERT OR IGNORE INTO driver_vehicle (student_id, vehicle_number)
-                VALUES (?, ?);
-            """ if db_type == 'sqlite' else """
-                INSERT INTO driver_vehicle (student_id, vehicle_number)
-                VALUES (%s, %s)
-                ON DUPLICATE KEY UPDATE student_id=student_id;
-            """, (user_id, vehicle_number))
-            
+            cursor.execute("SELECT 1 FROM drivers WHERE student_id = ?", (user_id,))
+            if not cursor.fetchone():
+                raise ValidationError('You must be a registered driver to add a vehicle.')
+            _link_vehicle(cursor, user_id, vehicle_number, vehicle_name, vehicle_type, vehicle_colour, year, capacity)
+
         flash(f'Vehicle {vehicle_number} successfully registered to your profile.', 'success')
-    except Exception as e:
-        flash(f'Could not register vehicle: {str(e)}', 'danger')
-        
+    except ValidationError as e:
+        flash(str(e), 'danger')
+    except Exception:
+        current_app.logger.exception('Vehicle registration failed')
+        flash('Could not register the vehicle. Please check the details and try again.', 'danger')
+
     return redirect(url_for('driver.driver_dashboard'))
 
 @driver_bp.route('/rides/publish', methods=['POST'])
@@ -211,6 +268,21 @@ def publish_ride():
     if start_point == end_point:
         flash('Start location and destination cannot be identical!', 'warning')
         return redirect(url_for('driver.driver_dashboard'))
+
+    if total_capacity <= 0:
+        flash('Ride capacity must be a positive number.', 'danger')
+        return redirect(url_for('driver.driver_dashboard'))
+    if fare is None or fare < 0 or fare > 100000:
+        flash('Please enter a valid fare.', 'danger')
+        return redirect(url_for('driver.driver_dashboard'))
+    try:
+        departure_dt = datetime.strptime(departure_time, '%Y-%m-%dT%H:%M')
+    except ValueError:
+        flash('Please enter a valid departure date and time.', 'danger')
+        return redirect(url_for('driver.driver_dashboard'))
+    if departure_dt <= datetime.now():
+        flash('Departure time must be in the future.', 'danger')
+        return redirect(url_for('driver.driver_dashboard'))
         
     # Build complete ordered list of location IDs
     ordered_location_ids = [start_point]
@@ -220,7 +292,8 @@ def publish_ride():
             if pt_int not in ordered_location_ids and pt_int != end_point:
                 ordered_location_ids.append(pt_int)
         except (ValueError, TypeError):
-            continue
+            flash('An intermediate stop contains an invalid location.', 'danger')
+            return redirect(url_for('driver.driver_dashboard'))
     ordered_location_ids.append(end_point)
     
     try:
@@ -237,6 +310,26 @@ def publish_ride():
                 flash('Cannot publish ride: Your driver licence has expired! (DBMS Rule / Trigger constraint)', 'danger')
                 return redirect(url_for('driver.driver_dashboard'))
                 
+            # The selected vehicle must belong to this driver, and the ride cannot exceed its seats
+            cursor.execute("""
+                SELECT v.capacity
+                FROM driver_vehicle dv
+                JOIN vehicle v ON v.vehicle_number = dv.vehicle_number
+                WHERE dv.student_id = ? AND dv.vehicle_number = ?
+            """, (user_id, vehicle_number))
+            vehicle_row = cursor.fetchone()
+            if not vehicle_row:
+                raise ValidationError('You can only publish rides using your own registered vehicles.')
+            if total_capacity > vehicle_row[0]:
+                raise ValidationError(f'This vehicle has only {vehicle_row[0]} seats; ride capacity cannot exceed it.')
+
+            # Every stop must be a real campus location
+            placeholders = ','.join('?' * len(set(ordered_location_ids)))
+            cursor.execute(f"SELECT COUNT(*) FROM locations WHERE location_id IN ({placeholders})",
+                           tuple(set(ordered_location_ids)))
+            if cursor.fetchone()[0] != len(set(ordered_location_ids)):
+                raise ValidationError('One or more selected stops do not exist.')
+
             # 1. Insert into available_rides
             cursor.execute("""
                 INSERT INTO available_rides (
@@ -253,8 +346,11 @@ def publish_ride():
                 """, (ride_id, seq, loc_id))
                 
         flash(f'Ride #{ride_id} successfully published with {len(ordered_location_ids)} ordered stops! Passengers can now book seats.', 'success')
-    except Exception as e:
-        flash(f'Failed to publish ride: {str(e)}', 'danger')
+    except ValidationError as e:
+        flash(str(e), 'danger')
+    except Exception:
+        current_app.logger.exception('Ride publishing failed')
+        flash('Unable to publish the ride. Please check the details and try again.', 'danger')
         
     return redirect(url_for('driver.driver_dashboard'))
 
@@ -270,6 +366,9 @@ def complete_ride(ride_id):
             ride = cursor.fetchone()
             if not ride:
                 flash('Ride not found or not owned by you.', 'danger')
+                return redirect(url_for('driver.driver_dashboard'))
+            if ride['status'] != 'PUBLISHED':
+                flash('Only a published ride can be completed.', 'warning')
                 return redirect(url_for('driver.driver_dashboard'))
                 
             # 2. Update Ride status to COMPLETED
@@ -290,8 +389,9 @@ def complete_ride(ride_id):
             """, (ride_id,))
             
         flash(f'Ride #{ride_id} has been successfully completed! All passenger trips are marked as COMPLETED.', 'success')
-    except Exception as e:
-        flash(f'Error completing ride: {str(e)}', 'danger')
+    except Exception:
+        current_app.logger.exception('Completing ride failed')
+        flash('Could not complete the ride. Please try again.', 'danger')
         
     return redirect(url_for('driver.driver_dashboard'))
 

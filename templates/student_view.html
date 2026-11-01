@@ -137,6 +137,7 @@
 
                                 <!-- Booking Action Form -->
                                 <form action="{{ url_for('student.create_booking') }}" method="POST" class="d-flex flex-wrap align-items-center justify-content-between gap-2 border-top pt-2">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <input type="hidden" name="ride_id" value="{{ ride.ride_id }}">
                                     
                                     <div class="d-flex align-items-center gap-2 flex-grow-1">
@@ -238,10 +239,58 @@
 
                             {% if b.booking_status == 'CONFIRMED' %}
                             <form action="{{ url_for('student.cancel_booking', booking_id=b.booking_id) }}" method="POST" onsubmit="return confirm('Are you sure you want to cancel this booking? The seat will be restored to other students.');">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-outline-danger btn-sm w-100 py-1">
                                     <i class="bi bi-x-circle me-1"></i> Cancel Booking (Restore Seat)
                                 </button>
                             </form>
+                            {% endif %}
+
+                            {% if b.booking_status == 'COMPLETED' %}
+                            <div class="border-top pt-2 mt-2">
+                                {% if b.my_rating or b.fb_comments %}
+                                    <div class="small">
+                                        <div class="fw-semibold text-dark mb-1"><i class="bi bi-chat-heart me-1 text-warning"></i> Your review</div>
+                                        {% if b.my_rating %}
+                                        <div class="text-warning">
+                                            {% for i in range(1, 6) %}<i class="bi {{ 'bi-star-fill' if i <= b.my_rating else 'bi-star' }}"></i>{% endfor %}
+                                            <span class="text-muted ms-1">{{ b.my_rating }}/5</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if b.fb_comments %}
+                                        <div class="text-muted"><span class="badge bg-light text-dark border">{{ b.fb_category }}</span> {{ b.fb_comments }}</div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                                {% if not b.my_rating or not b.fb_comments %}
+                                <form action="{{ url_for('student.review_booking', booking_id=b.booking_id) }}" method="POST" class="small mt-2">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    {% if not b.my_rating %}
+                                    <label class="form-label fw-semibold mb-1" for="rating-{{ b.booking_id }}">Rate {{ b.driver_first_name }}</label>
+                                    <select class="form-select form-select-sm mb-2" id="rating-{{ b.booking_id }}" name="rating">
+                                        <option value="">Select rating…</option>
+                                        <option value="5">★★★★★ Excellent (5)</option>
+                                        <option value="4">★★★★ Good (4)</option>
+                                        <option value="3">★★★ Okay (3)</option>
+                                        <option value="2">★★ Poor (2)</option>
+                                        <option value="1">★ Very poor (1)</option>
+                                    </select>
+                                    {% endif %}
+                                    {% if not b.fb_comments %}
+                                    <label class="form-label fw-semibold mb-1" for="comments-{{ b.booking_id }}">Feedback</label>
+                                    <select class="form-select form-select-sm mb-2" name="category" aria-label="Feedback category">
+                                        {% for c in ['GENERAL','PUNCTUALITY','SAFETY','VEHICLE','BEHAVIOUR','PAYMENT'] %}
+                                        <option value="{{ c }}">{{ c.title() }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <textarea class="form-control form-control-sm mb-2" id="comments-{{ b.booking_id }}" name="comments" rows="2" maxlength="500" placeholder="How was the ride?"></textarea>
+                                    {% endif %}
+                                    <button type="submit" class="btn btn-warning btn-sm w-100 py-1">
+                                        <i class="bi bi-send me-1"></i> Submit Review
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
                             {% endif %}
                         </div>
                         {% endfor %}

@@ -79,7 +79,7 @@ def init_sqlite_db(force_reset=False):
         driver_id INTEGER NOT NULL,
         vehicle_number TEXT NOT NULL,
         departure_time TIMESTAMP NOT NULL,
-        total_capacity INTEGER NOT NULL,
+        total_capacity INTEGER NOT NULL CHECK (total_capacity > 0),
         remaining_capacity INTEGER NOT NULL CHECK (remaining_capacity >= 0 AND remaining_capacity <= total_capacity),
         fare_per_passenger REAL NOT NULL DEFAULT 50.00 CHECK (fare_per_passenger >= 0),
         status TEXT NOT NULL DEFAULT 'PUBLISHED',
@@ -111,7 +111,8 @@ def init_sqlite_db(force_reset=False):
         status TEXT NOT NULL DEFAULT 'CONFIRMED',
         FOREIGN KEY (customer_id) REFERENCES students(student_id),
         FOREIGN KEY (pickup_location_id) REFERENCES locations(location_id),
-        FOREIGN KEY (drop_location_id) REFERENCES locations(location_id)
+        FOREIGN KEY (drop_location_id) REFERENCES locations(location_id),
+        CHECK (pickup_location_id <> drop_location_id)
     );
     """)
 
@@ -131,7 +132,8 @@ def init_sqlite_db(force_reset=False):
         FOREIGN KEY (customer_id) REFERENCES students(student_id),
         FOREIGN KEY (ride_id) REFERENCES available_rides(ride_id),
         FOREIGN KEY (pickup_location_id) REFERENCES locations(location_id),
-        FOREIGN KEY (drop_location_id) REFERENCES locations(location_id)
+        FOREIGN KEY (drop_location_id) REFERENCES locations(location_id),
+        CHECK (pickup_location_id <> drop_location_id)
     );
     """)
 
@@ -139,7 +141,7 @@ def init_sqlite_db(force_reset=False):
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS payment (
         payment_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        booking_id INTEGER NOT NULL,
+        booking_id INTEGER NOT NULL UNIQUE,
         payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         amount REAL NOT NULL CHECK (amount >= 0),
         status TEXT NOT NULL DEFAULT 'PAID',
@@ -147,6 +149,41 @@ def init_sqlite_db(force_reset=False):
         FOREIGN KEY (booking_id) REFERENCES bookings(booking_id)
     );
     """)
+
+    # 11. Driver Ratings table (one 1-5 star rating per completed booking)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS driver_ratings (
+        rating_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        booking_id INTEGER UNIQUE NOT NULL,
+        driver_id INTEGER NOT NULL,
+        customer_id INTEGER NOT NULL,
+        rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+        rated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (booking_id) REFERENCES bookings(booking_id),
+        FOREIGN KEY (driver_id) REFERENCES drivers(student_id),
+        FOREIGN KEY (customer_id) REFERENCES students(student_id)
+    );
+    """)
+
+    # 12. Feedback table (written feedback by a customer about a completed booking)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS feedback (
+        feedback_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        booking_id INTEGER UNIQUE NOT NULL,
+        driver_id INTEGER NOT NULL,
+        customer_id INTEGER NOT NULL,
+        category TEXT NOT NULL DEFAULT 'GENERAL'
+            CHECK (category IN ('GENERAL','PUNCTUALITY','SAFETY','VEHICLE','BEHAVIOUR','PAYMENT')),
+        comments TEXT NOT NULL CHECK (LENGTH(TRIM(comments)) > 0),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (booking_id) REFERENCES bookings(booking_id),
+        FOREIGN KEY (driver_id) REFERENCES drivers(student_id),
+        FOREIGN KEY (customer_id) REFERENCES students(student_id)
+    );
+    """)
+
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_ratings_driver ON driver_ratings(driver_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_feedback_driver ON feedback(driver_id);")
 
     # Views
     cursor.execute("""
@@ -175,9 +212,41 @@ def init_sqlite_db(force_reset=False):
       AND remaining_capacity > 0;
     """)
 
-    # Triggers
     cursor.execute("""
-    CREATE TRIGGER IF NOT EXISTS trg_booking_capacity_decrement
+    CREATE VIEW IF NOT EXISTS driver_rating_summary_view AS
+    SELECT
+        d.student_id AS driver_id,
+        s.first_name || ' ' || s.last_name AS driver_name,
+        COUNT(r.rating_id) AS total_ratings,
+        ROUND(AVG(r.rating), 2) AS average_rating
+    FROM drivers d
+    JOIN students s ON s.student_id = d.student_id
+    LEFT JOIN driver_ratings r ON r.driver_id = d.student_id
+    GROUP BY d.student_id, s.first_name, s.last_name;
+    """)
+
+    # Triggers
+    # Reject a confirmed booking on a ride that is not PUBLISHED or has no seats left,
+    # then decrement capacity. (Dropped first so existing databases get the new version.)
+    cursor.execute("DROP TRIGGER IF EXISTS trg_booking_capacity_decrement;")
+    cursor.execute("DROP TRIGGER IF EXISTS trg_booking_capacity_check;")
+    cursor.execute("""
+    CREATE TRIGGER trg_booking_capacity_check
+    BEFORE INSERT ON bookings
+    FOR EACH ROW
+    WHEN NEW.status = 'CONFIRMED'
+    BEGIN
+        SELECT CASE
+            WHEN NOT EXISTS (
+                SELECT 1 FROM available_rides
+                WHERE ride_id = NEW.ride_id AND status = 'PUBLISHED' AND remaining_capacity > 0
+            )
+            THEN RAISE(ABORT, 'Ride is unavailable or has no remaining seats.')
+        END;
+    END;
+    """)
+    cursor.execute("""
+    CREATE TRIGGER trg_booking_capacity_decrement
     AFTER INSERT ON bookings
     FOR EACH ROW
     WHEN NEW.status = 'CONFIRMED'
@@ -211,6 +280,26 @@ def init_sqlite_db(force_reset=False):
         END;
     END;
     """)
+
+    # Rating / feedback integrity: only the customer of a COMPLETED booking may rate it,
+    # and the driver recorded must be the driver of that booking's ride.
+    for tbl, label in (('driver_ratings', 'rate'), ('feedback', 'leave feedback for')):
+        cursor.execute(f"""
+        CREATE TRIGGER IF NOT EXISTS trg_validate_{tbl}
+        BEFORE INSERT ON {tbl}
+        FOR EACH ROW
+        BEGIN
+            SELECT CASE
+                WHEN (SELECT status FROM bookings WHERE booking_id = NEW.booking_id) IS NOT 'COMPLETED'
+                THEN RAISE(ABORT, 'Error: You can only {label} a COMPLETED booking.')
+                WHEN (SELECT customer_id FROM bookings WHERE booking_id = NEW.booking_id) IS NOT NEW.customer_id
+                THEN RAISE(ABORT, 'Error: Only the customer of this booking can {label} it.')
+                WHEN (SELECT ar.driver_id FROM bookings b JOIN available_rides ar ON ar.ride_id = b.ride_id
+                      WHERE b.booking_id = NEW.booking_id) IS NOT NEW.driver_id
+                THEN RAISE(ABORT, 'Error: Driver does not match the driver of this booking.')
+            END;
+        END;
+        """)
 
     # Seed data if empty
     cursor.execute("SELECT COUNT(*) FROM students;")

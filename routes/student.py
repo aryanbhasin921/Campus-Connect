@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
 from datetime import datetime
 from db import query_db, execute_db, get_db_transaction
 from routes.auth import login_required
@@ -27,6 +27,12 @@ def student_dashboard():
     pickup_id = request.args.get('pickup_id', type=int)
     drop_id = request.args.get('drop_id', type=int)
     search_date = request.args.get('search_date', '').strip()
+    if search_date:
+        try:
+            datetime.strptime(search_date, '%Y-%m-%d')
+        except ValueError:
+            flash('Invalid search date. Please select a valid date.', 'warning')
+            search_date = ''
     
     # 3. Query published rides with seats remaining
     # We load all published rides first, then match stops sequence
@@ -52,21 +58,25 @@ def student_dashboard():
     JOIN vehicle v ON v.vehicle_number = ar.vehicle_number
     WHERE ar.status = 'PUBLISHED'
       AND ar.remaining_capacity > 0
-      AND ar.departure_time >= datetime('now')
+      AND ar.departure_time >= ?
     ORDER BY ar.departure_time ASC;
     """
-    all_rides = query_db(rides_query)
+    now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
+    all_rides = query_db(rides_query, (now_str,))
     
-    # Attach ordered route stops to each ride
+    # Attach ordered route stops to each ride (one query for all rides)
+    stops_by_ride = {}
+    for stop in query_db("""
+        SELECT rp.ride_id, rp.sequence_no, rp.location_id, l.name
+        FROM ride_points rp
+        JOIN locations l ON l.location_id = rp.location_id
+        ORDER BY rp.ride_id, rp.sequence_no ASC
+    """):
+        stops_by_ride.setdefault(stop['ride_id'], []).append(stop)
+
     matched_rides = []
     for ride in all_rides:
-        stops = query_db("""
-            SELECT rp.sequence_no, rp.location_id, l.name
-            FROM ride_points rp
-            JOIN locations l ON l.location_id = rp.location_id
-            WHERE rp.ride_id = ?
-            ORDER BY rp.sequence_no ASC
-        """, (ride['ride_id'],))
+        stops = stops_by_ride.get(ride['ride_id'], [])
         ride['stops'] = stops
         
         # Check matching filter if pickup & drop are specified
@@ -112,7 +122,10 @@ def student_dashboard():
             s_driver.last_name AS driver_last_name,
             s_driver.phone_number AS driver_phone,
             v.name AS vehicle_name,
-            v.vehicle_number
+            v.vehicle_number,
+            dr.rating AS my_rating,
+            f.category AS fb_category,
+            f.comments AS fb_comments
         FROM bookings b
         JOIN available_rides ar ON ar.ride_id = b.ride_id
         JOIN drivers d ON d.student_id = ar.driver_id
@@ -121,6 +134,8 @@ def student_dashboard():
         JOIN locations l_pick ON l_pick.location_id = b.pickup_location_id
         JOIN locations l_drop ON l_drop.location_id = b.drop_location_id
         LEFT JOIN payment p ON p.booking_id = b.booking_id
+        LEFT JOIN driver_ratings dr ON dr.booking_id = b.booking_id
+        LEFT JOIN feedback f ON f.booking_id = b.booking_id
         WHERE b.customer_id = ?
         ORDER BY b.booking_id DESC;
     """, (user_id,))
@@ -174,6 +189,30 @@ def create_booking():
             if ride['remaining_capacity'] <= 0:
                 flash('Sorry, this ride is already fully booked!', 'danger')
                 return redirect(url_for('student.student_dashboard'))
+
+            # Validation: ride must still be open and not already departed
+            if ride['status'] != 'PUBLISHED':
+                flash('This ride is no longer available for booking.', 'warning')
+                return redirect(url_for('student.student_dashboard'))
+            try:
+                if datetime.fromisoformat(str(ride['departure_time'])) <= datetime.now():
+                    flash('You cannot book a ride that has already departed.', 'warning')
+                    return redirect(url_for('student.student_dashboard'))
+            except ValueError:
+                pass
+
+            # Validation: pickup/drop must be stops of THIS ride, pickup before drop
+            if pickup_location_id == drop_location_id:
+                flash('Pickup and drop-off locations must be different.', 'warning')
+                return redirect(url_for('student.student_dashboard'))
+            cursor.execute("SELECT sequence_no, location_id FROM ride_points WHERE ride_id = ?", (ride_id,))
+            stop_order = {r[1]: r[0] for r in cursor.fetchall()}
+            if pickup_location_id not in stop_order or drop_location_id not in stop_order:
+                flash('Pickup and drop-off must both be stops on this ride\'s route.', 'danger')
+                return redirect(url_for('student.student_dashboard'))
+            if stop_order[pickup_location_id] >= stop_order[drop_location_id]:
+                flash('Pickup stop must come before the drop-off stop on the route.', 'danger')
+                return redirect(url_for('student.student_dashboard'))
                 
             # Validation: check existing active booking
             cursor.execute(
@@ -211,8 +250,9 @@ def create_booking():
             """, (booking_id, now_iso, fare))
             
         flash(f'Seat booked successfully! Booking #{booking_id} confirmed. Remaining capacity decremented.', 'success')
-    except Exception as e:
-        flash(f'Booking failed due to transaction rollback: {str(e)}', 'danger')
+    except Exception:
+        current_app.logger.exception('Booking transaction failed')
+        flash('Booking could not be completed. Please try again.', 'danger')
         
     return redirect(url_for('student.student_dashboard'))
 
@@ -244,9 +284,77 @@ def cancel_booking(booking_id):
             cursor.execute("UPDATE payment SET status = 'REFUNDED' WHERE booking_id = ?", (booking_id,))
             
         flash(f'Booking #{booking_id} cancelled successfully! Seat restored to available ride.', 'info')
-    except Exception as e:
-        flash(f'Cancellation failed: {str(e)}', 'danger')
+    except Exception:
+        current_app.logger.exception('Cancellation failed')
+        flash('Cancellation could not be completed. Please try again.', 'danger')
         
+    return redirect(url_for('student.student_dashboard'))
+
+FEEDBACK_CATEGORIES = ['GENERAL', 'PUNCTUALITY', 'SAFETY', 'VEHICLE', 'BEHAVIOUR', 'PAYMENT']
+
+@student_bp.route('/bookings/<int:booking_id>/review', methods=['POST'])
+@login_required
+def review_booking(booking_id):
+    """Save the student's driver rating (driver_ratings) and/or written feedback (feedback)."""
+    user_id = session['user_id']
+    rating = request.form.get('rating', type=int)
+    category = request.form.get('category', 'GENERAL').strip().upper()
+    comments = request.form.get('comments', '').strip()
+
+    if rating is None and not comments:
+        flash('Please give a star rating, write feedback, or both.', 'warning')
+        return redirect(url_for('student.student_dashboard'))
+    if rating is not None and not (1 <= rating <= 5):
+        flash('Rating must be between 1 and 5 stars.', 'danger')
+        return redirect(url_for('student.student_dashboard'))
+    if category not in FEEDBACK_CATEGORIES:
+        category = 'GENERAL'
+
+    try:
+        with get_db_transaction() as (cursor, db_type):
+            cursor.execute("""
+                SELECT b.booking_id, b.status, ar.driver_id
+                FROM bookings b
+                JOIN available_rides ar ON ar.ride_id = b.ride_id
+                WHERE b.booking_id = ? AND b.customer_id = ?
+            """, (booking_id, user_id))
+            row = cursor.fetchone()
+            if not row:
+                flash('Booking not found or not owned by you.', 'danger')
+                return redirect(url_for('student.student_dashboard'))
+            status, driver_id = row[1], row[2]
+            if status != 'COMPLETED':
+                flash('You can rate a driver only after the ride is completed.', 'warning')
+                return redirect(url_for('student.student_dashboard'))
+
+            saved = []
+            if rating is not None:
+                cursor.execute("SELECT 1 FROM driver_ratings WHERE booking_id = ?", (booking_id,))
+                if cursor.fetchone():
+                    flash('You have already rated this ride.', 'warning')
+                else:
+                    cursor.execute("""
+                        INSERT INTO driver_ratings (booking_id, driver_id, customer_id, rating)
+                        VALUES (?, ?, ?, ?);
+                    """, (booking_id, driver_id, user_id, rating))
+                    saved.append('rating')
+            if comments:
+                cursor.execute("SELECT 1 FROM feedback WHERE booking_id = ?", (booking_id,))
+                if cursor.fetchone():
+                    flash('You have already submitted feedback for this ride.', 'warning')
+                else:
+                    cursor.execute("""
+                        INSERT INTO feedback (booking_id, driver_id, customer_id, category, comments)
+                        VALUES (?, ?, ?, ?, ?);
+                    """, (booking_id, driver_id, user_id, category, comments))
+                    saved.append('feedback')
+
+        if saved:
+            flash(f"Thank you! Your {' and '.join(saved)} for booking #{booking_id} was saved.", 'success')
+    except Exception:
+        current_app.logger.exception('Saving review failed')
+        flash('Could not save your review. Please try again.', 'danger')
+
     return redirect(url_for('student.student_dashboard'))
 
 @student_bp.route('/api/rides')
