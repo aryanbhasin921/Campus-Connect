@@ -26,6 +26,7 @@ def student_dashboard():
     # 2. Get search filters if any
     pickup_id = request.args.get('pickup_id', type=int)
     drop_id = request.args.get('drop_id', type=int)
+    sort_by = request.args.get('sort_by', 'time').strip()
     search_date = request.args.get('search_date', '').strip()
     if search_date:
         try:
@@ -34,9 +35,10 @@ def student_dashboard():
             flash('Invalid search date. Please select a valid date.', 'warning')
             search_date = ''
     
-    # 3. Query published rides with seats remaining
+    # 3. Query published rides with seats remaining and driver ratings
     # We load all published rides first, then match stops sequence
-    rides_query = """
+    order_clause = "ORDER BY r_stat.avg_rating DESC, ar.departure_time ASC" if sort_by == 'rating' else "ORDER BY ar.departure_time ASC"
+    rides_query = f"""
     SELECT 
         ar.ride_id,
         ar.driver_id,
@@ -51,15 +53,22 @@ def student_dashboard():
         s.phone_number AS driver_phone,
         v.name AS vehicle_name,
         v.type AS vehicle_type,
-        v.colour AS vehicle_colour
+        v.colour AS vehicle_colour,
+        COALESCE(r_stat.avg_rating, 0) AS avg_rating,
+        COALESCE(r_stat.total_ratings, 0) AS total_ratings
     FROM available_rides ar
     JOIN drivers d ON d.student_id = ar.driver_id
     JOIN students s ON s.student_id = d.student_id
     JOIN vehicle v ON v.vehicle_number = ar.vehicle_number
+    LEFT JOIN (
+        SELECT driver_id, ROUND(AVG(rating), 1) AS avg_rating, COUNT(*) AS total_ratings
+        FROM driver_ratings
+        GROUP BY driver_id
+    ) r_stat ON r_stat.driver_id = ar.driver_id
     WHERE ar.status = 'PUBLISHED'
       AND ar.remaining_capacity > 0
       AND ar.departure_time >= ?
-    ORDER BY ar.departure_time ASC;
+    {order_clause};
     """
     now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
     all_rides = query_db(rides_query, (now_str,))
@@ -147,7 +156,8 @@ def student_dashboard():
         my_bookings=my_bookings,
         selected_pickup=pickup_id,
         selected_drop=drop_id,
-        search_date=search_date
+        search_date=search_date,
+        sort_by=sort_by
     )
 
 @student_bp.route('/bookings/create', methods=['POST'])
